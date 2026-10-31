@@ -100,6 +100,75 @@ tests/                         # см. раздел "Тестирование"
   composites/
 ```
 
+# Типизация и статический анализ
+- Весь код, включая тесты, полностью типизирован: аннотированы аргументы и возвращаемые значения всех функций и методов, атрибуты классов, поля датаклассов. `Any` и `# type: ignore` не используются без крайней необходимости; если без них не обойтись, рядом пишется комментарий с причиной.
+- Код проверяется тремя инструментами, все проверки должны проходить без ошибок:
+  - **Pyright** в режиме `strict` - типы;
+  - **ruff** с `select = ["ALL"]` - стиль и типичные ошибки;
+  - **vulture** - неиспользуемый код.
+- Инструменты ставятся в группу зависимостей `dev` и настраиваются в `pyproject.toml`:
+  ```toml
+  [dependency-groups]
+  dev = [
+      "pyright[nodejs]~=1.1.411",
+      "ruff~=0.16.4",
+      "vulture~=2.16",
+      # pytest и прочее
+  ]
+
+  [tool.pyright]
+  include = ["sources", "tests"]
+  exclude = [
+      "**/__pycache__",
+      "**/.pytest_cache",
+      ".venv",
+  ]
+  typeCheckingMode = "strict"
+  reportMissingTypeStubs = "none"
+
+  [[tool.pyright.executionEnvironments]]
+  root = "tests"
+  reportPrivateUsage = "none"
+  extraPaths = ["."]
+
+  [tool.ruff]
+  target-version = "py310"
+
+  [tool.ruff.lint]
+  select = ["ALL"]
+  ignore = [
+      "D203",     # keeps D211: no blank line before class docstring
+      "D213",     # keeps D212: multi-line summary on first line
+      "EM",       # error-message style is overly prescriptive
+      "TRY003",   # long exception messages are an API concern
+      "ANN401",   # DB driver objects are dynamically typed
+      "N802",     # Settings properties mirror environment variable names
+      "N818",     # exception names are part of the public API
+  ]
+
+  [tool.ruff.lint.per-file-ignores]
+  "tests/**" = [
+      "SLF001",
+      "S101",     # `assert` is idiomatic in pytest
+      "D",        # tests do not need docstrings
+      "ANN",      # test annotations are optional
+      "FBT",      # boolean positional args in test helpers
+      "PLR2004",  # magic values are acceptable in assertions
+      "PLR0913",  # many-argument test helpers
+      "PT011",    # broad pytest.raises is acceptable in tests
+      "PT012",    # pytest.raises blocks may legitimately hold several statements
+      "ARG",      # unused fixture/helper args
+      "CPY001",   # tests do not carry copyright headers
+      "S608",     # SQL strings in tests are not injection vectors
+  ]
+
+  [tool.vulture]
+  paths = ["sources", "tests", "vulture_whitelist.py"]
+  min_confidence = 80
+  ```
+- Конфигурация общая для проекта. Новые исключения в `ignore` и `per-file-ignores` добавляются точечно, с комментарием о причине, и только когда правило противоречит архитектуре (например, имена, заданные спецификацией API). Отключать правило ради одного места нельзя - в таком месте пишется `# noqa: <код>` с причиной.
+- Vulture не знает о вызовах через фреймворки (методы `on_get`/`on_post` ресурсов falcon, фикстуры pytest, `__post_init__`). Ложные срабатывания подавляются белым списком `vulture_whitelist.py` в корне проекта, который передаётся vulture вместе с исходниками, а не понижением `min_confidence`.
+
 # Adapters
 - Вместо пакета adapters следует сразу создавать 3 пакета `interfaces`, `infra`, `integrations`, чтобы не плодить лишнюю вложенность.
 - Адаптеры не должны иметь зависимостей друг от друга, только от приложения.
@@ -230,3 +299,4 @@ tests/                         # см. раздел "Тестирование"
 - `classic.scheduler` - планировщик (см. `python-classic-composite`).
 - `falcon`, `waitress` - HTTP API (см. `python-classic-adapters-http-api`).
 - `pydantic`, `pydantic-settings` - парсинг в адаптерах и настройки.
+- `pyright`, `ruff`, `vulture` - статический анализ (см. Типизация и статический анализ).
