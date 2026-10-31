@@ -1,6 +1,6 @@
 ---
 name: python-classic-adapters-http-api
-description: Описание HTTP-адаптера для приложения на Python в "классической" архитектуре
+description: HTTP API адаптер (interfaces/api, falcon) для приложения на Python в "классической" архитектуре - ресурсы, парсинг, сериализация, ошибки, тестирование. Использовать вместе с python-classic-architecture.
 license: MIT
 compatibility: opencode
 ---
@@ -9,25 +9,180 @@ compatibility: opencode
 
 ## Описание
 
-В этом навыке описывается адаптер к приложению на Python,
-соответствующий шаблону "Классической" архитектуры.
+В этом навыке описывается HTTP API адаптер к приложению на Python,
+соответствующий шаблону "Классической" архитектуры. Это адаптер группы `interfaces`.
+Общая идея слоёв и правила группы interfaces описаны в навыке `python-classic-architecture`,
+общие правила композита - в навыке `python-classic-composite`.
 
 ## Когда использовать
 - Во время разработки новых фич в Python-приложении, требующих доступа по HTTP.
+- При написании тестов на HTTP-ресурсы.
 
 ## Instructions
+
+### Стек и размещение
 - За основу адаптера берется веб-фреймворк falcon, остальные запрещены.
 - В качестве WSGI-сервера используется waitress.
-- На каждую URL в приложении делать отдельный класс-Resource.
-- Все параметры запроса должны передавать в параметрах запроса (query string), заголовках и теле. Нельзя размещать параметры в URL.
+- Адаптер размещается в `interfaces/api/`: классы-ресурсы и DTO их ответов в `interfaces/api/resources/<resource>.py`, класс настроек в `interfaces/api/settings.py` (pydantic-settings).
+- Сборка falcon-приложения размещается в композите (см. Точка входа).
+
+### Ресурсы
+- На каждую URL в приложении делать отдельный класс-Resource. Действие задаётся HTTP-методом (`on_get`, `on_post`, `on_put`, `on_patch`, `on_delete`), а не URL.
+  ❌ `/api/create_book`, `/api/delete_book`
+  ✅ `/books` с `on_post` и `on_delete`
+- URL - существительное во множественном числе, общий префикс модуля: `/library/books`. Исключение - отдельный ресурс для одного объекта по `?id=` (карточка), он называется существительным в единственном числе: `/library/book?id=1`.
+- Действие над агрегатом, которое не укладывается в CRUD, оформляется отдельным ресурсом-существительным, обозначающим результат действия: `POST /loan_extensions` (продлить), `POST /returns` (вернуть), `POST /reader_blocks` (заблокировать).
+- Все параметры запроса должны передаваться в параметрах запроса (query string), заголовках и теле. Нельзя размещать параметры в URL (`/books/{id}`). Идентификатор передаётся query-параметром для GET или полем тела для PUT/PATCH.
 - Классы-ресурcы отвечают за разбор параметров запроса, парсинг данных из нагрузки,
-  упаковку ответа пользователю, аутентификацию, работу с заголовками.
+  упаковку ответа пользователю, работу с заголовками.
 - Классы-ресурсы НЕ ДОЛЖНЫ содержать бизнес-логику напрямую,
-  а только обращаться к UseCase с уровня приложения.
-- Адаптер НЕ создаёт собственных Pydantic-моделей (наследников BaseModel) для запросов/ответов.
-  Вместо этого TypeAdapter инстанцируется напрямую на DTO, импортированных с уровня приложения,
+  а только обращаться к UseCase с уровня приложения. Usecase передаются в конструктор ресурса.
+- `resp.status = falcon.HTTP_200` не ставится - это значение по умолчанию. `falcon.HTTP_201` ставится явно, только когда POST создаёт новый агрегат и возвращает его `id`. Действия над существующим агрегатом (продление, возврат, блокировка) возвращают 200.
+
+### Парсинг
+- Адаптер НЕ создаёт собственных Pydantic-моделей (наследников BaseModel) и не дублирует DTO для запросов.
+  TypeAdapter инстанцируется напрямую на `Params`, импортированных с уровня приложения,
   и размещается как ClassVar на классе-ресурсе. Каждый TypeAdapter инстанцируется лишь единожды
   за запуск программы.
-  ❌ class CreateCatRequest(BaseModel): ...       # не надо
-  ✅ _REQ: ClassVar = TypeAdapter(CreateCatDTO)
-- Инстанцирование приложения falcon и регистрация ресурсов должны размещаться в композите.
+  ❌ class CreateBookRequest(BaseModel): ...       # не надо
+  ✅ _create_validator: ClassVar = TypeAdapter(CreateBookParams)
+- Query string парсится через `validate_python(req.params)`, тело - через `validate_json(req.bounded_stream.read())`.
+- `TypeAdapter` вызывает `__post_init__` датакласса при разборе и превращает `ValueError` из него в `pydantic.ValidationError`. Поэтому и нарушение структуры и типов, и нарушение семантики параметров дают 400 без отдельной обработки.
+
+### Сериализация
+- Ответ упаковывается тоже через `TypeAdapter`, сразу в JSON: `dump_json(...)` кладётся в `resp.data`. `resp.media` и JSON-обработчик falcon для ответов не используются.
+- TypeAdapter ответа, как и TypeAdapter параметров, - `ClassVar` на классе-ресурсе, создаётся один раз.
+- Если ресурс отдаёт ровно то, что вернул usecase, TypeAdapter строится на результате usecase: `TypeAdapter(list[BookDTO])`.
+- Если ответ отличается от результата usecase (usecase вернул простое значение, которое нужно обернуть в объект, поля нужно переименовать, отбросить или собрать из нескольких вызовов), рядом с ресурсом в `interfaces/api/` описывается датакласс-DTO ответа. Он и есть контракт HTTP API, TypeAdapter строится на нём. DTO ответа объявляется в файле ресурса и называется по смыслу ответа (`BookCreated`), без суффикса `Response`.
+- Даты, перечисления и вложенные датаклассы сериализует сам TypeAdapter, ручной перевод в `dict` не нужен.
+
+Пример ресурса:
+```python
+@dataclass(frozen=True)
+class BookCreated:
+    """Контракт ответа на создание книги: usecase возвращает только id"""
+
+    id: int
+
+
+class BooksResource:
+    _query_validator: ClassVar = TypeAdapter(FindBooksParams)
+    _create_validator: ClassVar = TypeAdapter(CreateBookParams)
+    _update_validator: ClassVar = TypeAdapter(UpdateBookParams)
+    _books_serializer: ClassVar = TypeAdapter(list[BookDTO])
+    _created_serializer: ClassVar = TypeAdapter(BookCreated)
+
+    def __init__(self, find_books: FindBooks, create_book: CreateBook, update_book: UpdateBook):
+        self._find_books = find_books
+        self._create_book = create_book
+        self._update_book = update_book
+
+    def on_get(self, req: falcon.Request, resp: falcon.Response):
+        params = self._query_validator.validate_python(req.params)
+        books = self._find_books.run(params)
+        resp.content_type = falcon.MEDIA_JSON
+        resp.data = self._books_serializer.dump_json(books)
+
+    def on_post(self, req: falcon.Request, resp: falcon.Response):
+        params = self._create_validator.validate_json(req.bounded_stream.read())
+        book_id = self._create_book.run(params)
+        resp.status = falcon.HTTP_201
+        resp.content_type = falcon.MEDIA_JSON
+        resp.data = self._created_serializer.dump_json(BookCreated(id=book_id))
+
+    def on_put(self, req: falcon.Request, resp: falcon.Response):
+        params = self._update_validator.validate_json(req.bounded_stream.read())
+        self._update_book.run(params)
+```
+
+### Точка входа
+- Точка входа HTTP API - пакет `composites/interfaces/api/`:
+  ```
+  composites/interfaces/api/
+    __main__.py              # waitress.serve(app, ...)
+    wsgi.py                  # create_app(...) и модульный app
+    settings.py              # инстанс настроек
+    resources/<resource>.py  # инстанс ресурса с внедрёнными usecase
+  ```
+- Приложение собирается функцией-фабрикой `create_app(...)` в `wsgi.py`: middleware, обработчики ошибок, маршруты. Ресурсы передаются ей аргументами, модульный `app` создаётся её вызовом:
+  ```python
+  # composites/interfaces/api/wsgi.py
+  def create_app(books: BooksResource, ...) -> falcon.App:
+      app = falcon.App(middleware=[...])
+      # error handlers, add_route
+      return app
+
+  app = create_app(books=books_resource, ...)
+  ```
+- `waitress.serve(app, ...)` вызывается только в `__main__.py`, импорт `wsgi.py` сервер не запускает.
+- Тесты ресурсов вызывают `create_app` со своими ресурсами и не дублируют сборку.
+- В тестах композита (см. `python-classic-composite`) настоящий `app` импортируется из `wsgi.py` внутри фикстуры, зависящей от `test_env`, и используется через `falcon.testing.TestClient`.
+
+### Обработка ошибок
+- Ошибки обрабатываются глобально в `create_app`, а не в ресурсах:
+  - `pydantic.ValidationError` -> 400;
+  - один обработчик на базовые классы ожидаемых ошибок `AppError` (из `app/errors.py`) и `DomainError` (из `app/commands/domain/errors.py`, если домен есть) -> 422. Он покрывает все ошибки приложения и домена, включая `<Aggregate>NotFound`. Отдельные обработчики на каждый тип ошибки не добавляются.
+  ```python
+  # interfaces/api/errors.py
+  @dataclass(frozen=True)
+  class ErrorDetail:
+      """Контракт тела ответа с ошибкой"""
+
+      type: str
+      msg: str
+      ctx: dict[str, Any]
+
+
+  _errors_serializer = TypeAdapter(list[ErrorDetail])
+
+
+  def serialize_app_error(req, resp, error: AppError | DomainError, params):
+      detail = ErrorDetail(type=type(error).__name__, msg=str(error), ctx=vars(error))
+      resp.status = falcon.HTTP_422
+      resp.content_type = falcon.MEDIA_JSON
+      resp.data = _errors_serializer.dump_json([detail])
+
+  app.add_error_handler(pydantic.ValidationError, serialize_pydantic_error)
+  app.add_error_handler((AppError, DomainError), serialize_app_error)
+  ```
+- Тело ошибки: `type` - имя класса ошибки, `msg` - `str(error)`, `ctx` - все поля ошибки (`vars(error)`), то есть поля датакласса для ошибок с параметрами и пустой объект для ошибок без них. Тело описано DTO `ErrorDetail` в `interfaces/api/errors.py` и упаковывается через TypeAdapter, как и обычные ответы. Обработчики ошибок тоже размещаются там, `create_app` только регистрирует их.
+
+## Тестирование
+Тесты ресурсов - средний уровень пирамиды (см. `python-classic-architecture`): проверяется только перевод протокола, без БД и настоящих usecase. Сквозная проверка API с настоящими usecase и БД - в тестах композита (см. `python-classic-composite`).
+
+### Подход
+- На каждый ресурс - свой файл `tests/adapters/interfaces/api/test_<resource>.py`, фикстуры - в `tests/adapters/interfaces/api/conftest.py`.
+- HTTP наружу не вызывается: используется `falcon.testing.TestClient`.
+- Ресурсу передаются фейковые usecase: классы с методом `run`, которые запоминают полученные параметры и возвращают подготовленный результат или бросают заданную ошибку.
+  ```python
+  class FakeUseCase:
+      def __init__(self, result=None, error: Exception | None = None) -> None:
+          self.result = result
+          self.error = error
+          self.calls: list = []
+
+      def run(self, params):
+          self.calls.append(params)
+          if self.error:
+              raise self.error
+          return self.result
+  ```
+  Здесь, в отличие от тестов app, проверка полученных параметров допустима: это и есть поведение ресурса - во что он разобрал запрос.
+- Приложение собирается фабрикой `create_app(...)` из `composites/interfaces/api/wsgi.py`, в которую передаются ресурсы с фейковыми usecase. Middleware, обработчики ошибок и маршруты в тестах не дублируются: иначе тест не проверит, что ошибка превращается в нужный код ответа.
+  ```python
+  @pytest.fixture
+  def create_book() -> FakeUseCase:
+      return FakeUseCase(result=1)
+
+  @pytest.fixture
+  def client(create_book, ...) -> TestClient:
+      books = BooksResource(create_book=create_book, ...)
+      return TestClient(create_app(books=books, ...))
+  ```
+
+### Что проверять
+- Разбор запроса: query string и тело превращаются в ожидаемые `Params` usecase.
+- Код ответа и форма тела для успешного запроса (`201` + `id` для создания, `200` для остального): тело соответствует контракту - результату usecase или DTO ответа, даты и перечисления сериализованы.
+- Ошибка валидации (неверный тип, отсутствующее поле, `None` вместо списка, `ValueError` из `__post_init__` `Params`) - 400, usecase не вызывается.
+- Ошибка приложения, которую бросил usecase, в том числе `<Aggregate>NotFound`, - 422, в теле `type` с именем класса ошибки и `ctx` с её полями.
+- Бизнес-правила здесь не проверяются: они покрыты unit-тестами app.
