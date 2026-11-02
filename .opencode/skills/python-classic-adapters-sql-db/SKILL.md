@@ -132,10 +132,18 @@ compatibility: opencode
   def save(self, reader: Reader) -> Reader:
       reader.check()
       if reader.id is None:
-          row = self._db.query_from('aggregates/readers/insert.sql').execute(**reader.__dict__).fetchone()
+          row = (
+              self._db.query_from('aggregates/readers/insert.sql')
+              .execute(**reader.__dict__)
+              .fetchone()
+          )
           reader.id = row[0]
       else:
-          row = self._db.query_from('aggregates/readers/update.sql').execute(**reader.__dict__).fetchone()
+          row = (
+              self._db.query_from('aggregates/readers/update.sql')
+              .execute(**reader.__dict__)
+              .fetchone()
+          )
           if row is None:
               raise ReaderNotFound(id=reader.id)
       self._sync_associations(reader)
@@ -180,8 +188,13 @@ tests/
   ```python
   collection = MigrationsCollection(sources=[str(MIGRATIONS_DIR_PATH)])
   with Migrator(
-      driver='psycopg', db_host=..., db_port=..., db_name=...,
-      db_user=..., db_pass=..., migration_schema=settings.TEST_MIGRATIONS_SCHEMA,
+      driver='psycopg',
+      db_host=...,
+      db_port=...,
+      db_name=...,
+      db_user=...,
+      db_pass=...,
+      migration_schema=settings.TEST_MIGRATIONS_SCHEMA,
   ) as migrator:
       hooks, migrations = collection.to_apply(migrator.history())
       migrator.apply(migrations, hooks)

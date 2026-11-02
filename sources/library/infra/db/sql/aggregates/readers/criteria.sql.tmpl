@@ -1,0 +1,15 @@
+{#
+  Критерии агрегата Reader. Таблица readers - алиас r.
+  Значения вставляются литералами (sqlsafe): см. комментарий в aggregates/books/criteria.sql.tmpl.
+#}
+{% macro membership_active(criteria) -%}
+    (r.valid_until >= DATE '{{ criteria.on.isoformat() | sqlsafe }}')
+{%- endmacro %}
+
+{% macro has_tier(criteria) -%}
+    (r.tier = '{{ criteria.tier | replace("'", "''") | replace("%", "%%") | sqlsafe }}')
+{%- endmacro %}
+
+{% macro not_blocked(criteria) -%}
+    (NOT r.is_blocked)
+{%- endmacro %}

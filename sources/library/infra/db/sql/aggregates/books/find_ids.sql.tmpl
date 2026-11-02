@@ -1,0 +1,5 @@
+{% import 'aggregates/books/criteria.sql.tmpl' as macros %}
+SELECT b.id
+FROM library.books b
+WHERE {{ traverse(criteria, macros) | safe }}
+ORDER BY b.id

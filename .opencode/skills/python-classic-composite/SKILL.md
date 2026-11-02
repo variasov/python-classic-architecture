@@ -90,13 +90,19 @@ compatibility: opencode
   ```python
   # composites/app/commands/return_loan.py
   def create_return_loan(
-      loans: LoansRepo, clock: Clock, engine: Engine, logger: logging.Logger,
+      loans: LoansRepo,
+      clock: Clock,
+      engine: Engine,
+      logger: logging.Logger,
   ) -> ReturnLoan:
       return_loan = ReturnLoan(loans=loans, clock=clock, logger=logger)
       return_loan.run = engine.transaction(return_loan.run)
       return return_loan
 
-  return_loan = create_return_loan(loans=loans_repo, clock=clock, engine=engine, logger=logger)
+
+  return_loan = create_return_loan(
+      loans=loans_repo, clock=clock, engine=engine, logger=logger
+  )
   ```
 - Сборка точки входа конкретного адаптера тоже оформляется фабрикой, её устройство описано в навыке адаптера.
 - Unit-тесты и тесты адаптеров импортируют фабрики, но не инстансы. Инстансы импортируют только тесты композита.
@@ -139,6 +145,7 @@ compatibility: opencode
   @pytest.fixture(scope='session')
   def scheduler_jobs(test_env):
       from library.composites.interfaces.reminders_scheduler import jobs
+
       return jobs
   ```
   Фикстура `test_env` выставляет окружение, фикстуры точек входа зависят от неё и импортируют композит внутри себя.

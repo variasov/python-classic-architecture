@@ -72,7 +72,9 @@ class BooksResource:
     _books_serializer: ClassVar = TypeAdapter(list[BookDTO])
     _created_serializer: ClassVar = TypeAdapter(BookCreated)
 
-    def __init__(self, find_books: FindBooks, create_book: CreateBook, update_book: UpdateBook):
+    def __init__(
+        self, find_books: FindBooks, create_book: CreateBook, update_book: UpdateBook
+    ):
         self._find_books = find_books
         self._create_book = create_book
         self._update_book = update_book
@@ -141,6 +143,7 @@ class BooksResource:
       resp.status = falcon.HTTP_422
       resp.content_type = falcon.MEDIA_JSON
       resp.data = _errors_serializer.dump_json([detail])
+
 
   app.add_error_handler(pydantic.ValidationError, serialize_pydantic_error)
   app.add_error_handler((AppError, DomainError), serialize_app_error)

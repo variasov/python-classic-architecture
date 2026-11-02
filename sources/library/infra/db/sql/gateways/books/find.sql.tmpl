@@ -1,0 +1,27 @@
+SELECT
+    b.id AS FoundBook__id,
+    b.isbn AS FoundBook__isbn,
+    b.title AS FoundBook__title,
+    b.authors AS FoundBook__authors,
+    b.published_year AS FoundBook__published_year,
+    (SELECT count(*) FROM library.copies c WHERE c.book_id = b.id AND c.is_available)::int
+        AS FoundBook__available_copies
+FROM library.books b
+WHERE TRUE
+{% if title__contains %}
+    AND b.title ILIKE '%%' || {{ title__contains }} || '%%'
+{% endif %}
+{% if author %}
+    AND {{ author }} = ANY (b.authors)
+{% endif %}
+{% if only_available %}
+    AND EXISTS (SELECT 1 FROM library.copies x WHERE x.book_id = b.id AND x.is_available)
+{% endif %}
+{% if year_from is not none %}
+    AND b.published_year >= {{ year_from }}
+{% endif %}
+{% if year_to is not none %}
+    AND b.published_year <= {{ year_to }}
+{% endif %}
+ORDER BY {{ order_column | identifier }}, b.id
+LIMIT {{ limit }} OFFSET {{ offset }}

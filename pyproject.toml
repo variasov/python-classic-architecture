@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "library"
 version = "0.1.0"
 description = "Демо-проект «Библиотека» в классической архитектуре"
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 dependencies = [
     "falcon",
     "waitress",
@@ -17,15 +17,19 @@ dependencies = [
     "classic-migrations",
     "classic-criteria",
     "classic-signals",
-    "classic-error-handling",
     "classic-scheduler",
     "urllib3",
+    "tenacity",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest",
+    "pytest-httpserver",
     "hypothesis",
+    "pyright[nodejs]",
+    "ruff",
+    "vulture",
 ]
 
 [tool.setuptools.packages.find]
@@ -38,3 +42,73 @@ namespaces = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["sources"]
+addopts = "--import-mode=importlib"
+
+[tool.pyright]
+include = ["sources", "tests"]
+exclude = [
+    "**/__pycache__",
+    "**/.pytest_cache",
+    ".venv",
+]
+typeCheckingMode = "strict"
+reportMissingTypeStubs = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+reportPrivateUsage = "none"
+extraPaths = ["."]
+
+[tool.ruff]
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D203",     # keeps D211: no blank line before class docstring
+    "D213",     # keeps D212: multi-line summary on first line
+    "EM",       # error-message style is overly prescriptive
+    "TRY003",   # long exception messages are an API concern
+    "ANN401",   # DB driver objects are dynamically typed
+    "N802",     # Settings properties mirror environment variable names
+    "N818",     # exception names are part of the public API
+    "INP001",   # namespace packages without __init__.py by design
+    "D1",       # docstrings only where they explain a contract, not everywhere
+    "CPY001",   # no copyright headers
+    "A002",     # `id` argument in repositories and DTO is part of the API
+    "TC",       # dataclasses and TypeAdapter need annotation types at runtime
+    "RUF001",   # Cyrillic in strings is intended
+    "RUF002",   # Cyrillic in docstrings is intended
+    "RUF003",   # Cyrillic in comments is intended
+]
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "SLF001",
+    "S101",     # `assert` is idiomatic in pytest
+    "D",        # tests do not need docstrings
+    "ANN",      # test annotations are optional
+    "FBT",      # boolean positional args in test helpers
+    "PLR2004",  # magic values are acceptable in assertions
+    "PLR0913",  # many-argument test helpers
+    "PLR0917",  # fixtures chain through many dependencies as positional parameters
+    "PT011",    # broad pytest.raises is acceptable in tests
+    "PT012",    # pytest.raises blocks may legitimately hold several statements
+    "ARG",      # unused fixture/helper args
+    "CPY001",   # tests do not carry copyright headers
+    "S608",     # SQL strings in tests are not injection vectors
+]
+"sources/library/interfaces/api/**" = [
+    "ARG001",   # falcon error handlers have a fixed signature (req, resp, error, params)
+    "ARG002",   # falcon responders have a fixed signature (req, resp)
+]
+
+[tool.vulture]
+paths = ["sources", "tests", "vulture_whitelist.py"]
+min_confidence = 80

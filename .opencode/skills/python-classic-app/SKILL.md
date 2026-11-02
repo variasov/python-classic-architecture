@@ -101,8 +101,7 @@ app/
   # app/clock.py
   class Clock(ABC):
       @abstractmethod
-      def now(self) -> datetime:
-          ...
+      def now(self) -> datetime: ...
 
       def today(self) -> date:
           return self.now().date()
@@ -185,7 +184,9 @@ app/
           return loan
 
       def find(self, criteria: Criteria[Loan]) -> list[Loan]:
-          return [deepcopy(l) for l in self._loans.values() if criteria.is_satisfied_by(l)]
+          return [
+              deepcopy(l) for l in self._loans.values() if criteria.is_satisfied_by(l)
+          ]
   ```
 - Поведение fake и настоящего репозитория должно совпадать. Для этого сценарии из тестов репозитория (сохранить и прочитать заново, `NotFound`, поиск по критериям) желательно оформить общим набором, который параметризуется обеими реализациями (см. `python-classic-adapters-sql-db`).
 

@@ -1,0 +1,23 @@
+SELECT
+    l.id AS FoundLoan__id,
+    l.reader_id AS FoundLoan__reader_id,
+    l.book_id AS FoundLoan__book_id,
+    l.inventory_number AS FoundLoan__inventory_number,
+    l.issued_at AS FoundLoan__issued_at,
+    l.due AS FoundLoan__due,
+    l.returned_at AS FoundLoan__returned_at,
+    (SELECT count(*) FROM library.loan_extensions e WHERE e.loan_id = l.id)::int
+        AS FoundLoan__extensions_count
+FROM library.loans l
+WHERE TRUE
+{% if reader_id is not none %}
+    AND l.reader_id = {{ reader_id }}
+{% endif %}
+{% if only_overdue %}
+    AND l.returned_at IS NULL AND l.due < {{ today }}
+{% endif %}
+{% if only_active %}
+    AND l.returned_at IS NULL
+{% endif %}
+ORDER BY l.id
+LIMIT {{ limit }} OFFSET {{ offset }}

@@ -144,7 +144,21 @@ tests/                         # см. раздел "Тестирование"
       "ANN401",   # DB driver objects are dynamically typed
       "N802",     # Settings properties mirror environment variable names
       "N818",     # exception names are part of the public API
+      "INP001",   # namespace packages without __init__.py by design
+      "D1",       # docstrings only where they explain a contract, not everywhere
+      "CPY001",   # no copyright headers
+      "A002",     # `id` argument in repositories and DTO is part of the API
+      "TC",       # dataclasses and TypeAdapter need annotation types at runtime
+      "RUF001",   # Cyrillic in strings is intended
+      "RUF002",   # Cyrillic in docstrings is intended
+      "RUF003",   # Cyrillic in comments is intended
   ]
+
+  [tool.ruff.lint.flake8-quotes]
+  inline-quotes = "single"
+
+  [tool.ruff.format]
+  quote-style = "single"
 
   [tool.ruff.lint.per-file-ignores]
   "tests/**" = [

@@ -52,7 +52,7 @@ compatibility: opencode
           if self.due <= self.start:
               raise LoanPeriodInvalid(start=self.start, due=self.due)
 
-      def extended(self, days: int) -> "LoanPeriod":
+      def extended(self, days: int) -> 'LoanPeriod':
           return LoanPeriod(start=self.start, due=self.due + timedelta(days=days))
 
 
@@ -106,6 +106,7 @@ compatibility: opencode
   # ❌
   def overdue(self) -> bool:
       return self.returned_at is None and self.period.due < date.today()
+
 
   # ✅
   @criteria
@@ -166,13 +167,32 @@ compatibility: opencode
   ```
 
 ## Критерии
-- Критерий - функции-предикаты, описывающие разные условия, в которых могут находиться объекты. Для реализации используется classic-criteria. Критерии объявляются методами агрегата с декоратором `@criteria`, комбинируются через `&`, `|`, `~` и используются двумя способами:
-  - в домене - проверка объекта: `Reader.not_blocked().is_satisfied_by(reader)` или короче `reader.not_blocked()` (вызов на инстансе сразу возвращает `bool`);
-  - в хранилище - описание выборки: репозиторий принимает дерево критериев и транслирует его в запрос.
+- Критерий - функции-предикаты, описывающие разные условия, в которых могут находиться объекты. Для реализации используется classic-criteria. Критерии объявляются методами агрегата с декоратором `@criteria`. Декоратор даёт две формы вызова, и обе используются по назначению:
+  - **на инстансе - сразу `bool`.** `loan.returned()`, `reader.membership_active(on=today)`. Это основная форма для проверки одного конкретного объекта в домене и в usecase: в условиях `if`, в методах агрегата (`if self.returned(): ...`). Такой вызов читается как обычный метод.
+  - **на классе - ленивый объект критерия.** `Loan.overdue(on=today)` ничего не проверяет, а создаёт объект `Criteria[Loan]`, который можно комбинировать через `&`, `|`, `~`, передать в репозиторий для выборки (`self.loans.find(Loan.overdue(on=today) & ~Loan.returned())`) или применить к объекту позже через `is_satisfied_by`.
+  ```python
+  # ✅ проверка конкретного объекта - вызов на инстансе
+  if loan.returned():
+      raise LoanAlreadyReturned(loan_id=loan.id)
+  if not (reader.membership_active(on=today) and reader.not_blocked()):
+      raise ReaderCannotBorrow(reader_id=reader.id)
+
+  # ✅ комбинация критериев, которую нужно и проверить, и отдать в хранилище - вызов на классе
+  can_borrow = Reader.membership_active(on=today) & Reader.not_blocked()
+  if not can_borrow.is_satisfied_by(reader):
+      ...
+
+  # ❌ ленивая форма там, где достаточно прямого вызова
+  if Loan.returned().is_satisfied_by(self):
+      ...
+  ```
+- Ленивая форма на классе нужна, когда критерий передаётся куда-то как значение: в репозиторий, в переменную для повторного использования, в комбинацию с другими критериями. Для однократной проверки одного объекта используется вызов на инстансе.
+- У инстанса есть также `.must_be_satisfied(...)`, бросающий `CriteriaNotSatisfied` из classic-criteria. В домене он не используется: нарушение правила - это конкретная доменная ошибка с понятным именем, поэтому проверка пишется явным `if` с `raise`.
   ```python
   @dataclass
   class Loan:
       ...
+
       @criteria
       def overdue(self, on: date) -> bool:
           return self.returned_at is None and self.period.due < on
@@ -201,7 +221,9 @@ compatibility: opencode
   class IssueLoan:
       """Выдача затрагивает три агрегата: читателя, экземпляр и новую выдачу"""
 
-      def __init__(self, readers: ReadersRepo, copies: CopiesRepo, loans: LoansRepo) -> None:
+      def __init__(
+          self, readers: ReadersRepo, copies: CopiesRepo, loans: LoansRepo
+      ) -> None:
           self.readers = readers
           self.copies = copies
           self.loans = loans
@@ -236,5 +258,5 @@ compatibility: opencode
 - Для граничных значений используется `hypothesis`: стратегии для непустых строк, для строк из одних пробелов, для дат в допустимом диапазоне, для идентификаторов из разрешённого алфавита.
 - Обязательно тестируется класс «почти валидных» входов: пустая строка, строка из пробелов, пустой список, значение на границе диапазона и сразу за ней. `None` вместо списка проверяется при разборе входных данных в адаптере, а не в домене.
 - Каждое поведение агрегата из спецификации (каждый публичный метод) покрыто хотя бы одним тестом.
-- Критерии проверяются на объекте: `Loan.overdue(on=today).is_satisfied_by(loan)`, в том числе комбинации через `&`, `|`, `~`. Трансляция критериев в SQL проверяется в тестах репозитория (см. `python-classic-adapters-sql-db`).
+- Критерии проверяются в обеих формах: вызовом на инстансе (`loan.overdue(on=today)`) и ленивым объектом на классе (`Loan.overdue(on=today).is_satisfied_by(loan)`), в том числе комбинации через `&`, `|`, `~`. Трансляция критериев в SQL проверяется в тестах репозитория (см. `python-classic-adapters-sql-db`).
 - Доменный usecase тестируется с in-memory репозиториями, как usecase app (см. `python-classic-app`).

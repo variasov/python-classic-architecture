@@ -1,0 +1,5 @@
+{% import 'aggregates/readers/criteria.sql.tmpl' as macros %}
+SELECT r.id
+FROM library.readers r
+WHERE {{ traverse(criteria, macros) | safe }}
+ORDER BY r.id
