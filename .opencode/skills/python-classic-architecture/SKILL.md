@@ -1,6 +1,6 @@
 ---
 name: python-classic-architecture
-description: Центральный навык "классической" архитектуры в Python - идея разделения на слои, типовые слои (app, domain, adapters, composite), раскладка пакета, общие правила и пирамида тестирования. Использовать всегда вместе с навыками отдельных слоёв.
+description: Центральный навык "классической" архитектуры в Python - идея разделения на слои, типовые слои (app, domain, adapters, composite), раскладка пакета, общие правила, ошибки и пирамида тестирования. Использовать всегда вместе с навыками отдельных слоёв.
 license: MIT
 compatibility: opencode
 ---
@@ -23,6 +23,14 @@ compatibility: opencode
 | Адаптер HTTP API | `interfaces/api/` | `python-classic-adapters-http-api` |
 | Адаптер SQL DB | `infra/db/` | `python-classic-adapters-sql-db` |
 | Композит | `composites/` | `python-classic-composite` |
+
+Редко нужные подробности вынесены в файлы `references/` в каталоге навыка и читаются по необходимости:
+
+| Файл | Когда читать |
+|---|---|
+| `references/tooling.md` этого навыка | Создание проекта, правка `pyproject.toml`, ошибки pyright/ruff/vulture |
+| `references/testing.md` этого навыка | Написание тестов: организация `tests/`, подмена внешних систем, тесты клиентов integrations |
+| `references/testing.md` навыка слоя | Написание тестов этого слоя |
 
 # Когда использовать
 - Когда пользователь запрашивает ревью кода или архитектуры.
@@ -82,10 +90,11 @@ sources/<package>/
     errors.py                  # AppError - базовый класс ошибок приложения
     clock.py                   # ABC Clock - источник текущего времени
     commands/
-      domain/                  # агрегаты, ABC репозиториев, DomainError и доменные ошибки
-      use_cases/<group>/       # usecase-команды
+      domain/                  # агрегаты, ABC репозиториев, DomainError и доменные ошибки; не импортирует остальной app
+      <system>.py              # ABC внешней системы, общий для нескольких команд
+      use_cases/<group>/<usecase>.py
       signals.py               # контракты сигналов (при необходимости)
-    queries/<group>/           # usecase-запросы, их DTO и ABC гейтвеев
+    queries/<group>/<query>.py # usecase-запросы, их DTO и ABC гейтвеев
   infra/
     db/                        # см. навык python-classic-adapters-sql-db
     clock/system.py            # SystemClock - реализация Clock на системных часах
@@ -94,7 +103,7 @@ sources/<package>/
   interfaces/
     api/                       # см. навык python-classic-adapters-http-api
   composites/                  # см. навык python-classic-composite
-tests/                         # см. раздел "Тестирование"
+tests/                         # см. references/testing.md
   unit/
   adapters/
   composites/
@@ -106,82 +115,33 @@ tests/                         # см. раздел "Тестирование"
   - **Pyright** в режиме `strict` - типы;
   - **ruff** с `select = ["ALL"]` - стиль и типичные ошибки;
   - **vulture** - неиспользуемый код.
-- Инструменты ставятся в группу зависимостей `dev` и настраиваются в `pyproject.toml`:
-  ```toml
-  [dependency-groups]
-  dev = [
-      "pyright[nodejs]~=1.1.411",
-      "ruff~=0.16.4",
-      "vulture~=2.16",
-      # pytest и прочее
-  ]
-
-  [tool.pyright]
-  include = ["sources", "tests"]
-  exclude = [
-      "**/__pycache__",
-      "**/.pytest_cache",
-      ".venv",
-  ]
-  typeCheckingMode = "strict"
-  reportMissingTypeStubs = "none"
-
-  [[tool.pyright.executionEnvironments]]
-  root = "tests"
-  reportPrivateUsage = "none"
-  extraPaths = ["."]
-
-  [tool.ruff]
-  target-version = "py310"
-
-  [tool.ruff.lint]
-  select = ["ALL"]
-  ignore = [
-      "D203",     # keeps D211: no blank line before class docstring
-      "D213",     # keeps D212: multi-line summary on first line
-      "EM",       # error-message style is overly prescriptive
-      "TRY003",   # long exception messages are an API concern
-      "ANN401",   # DB driver objects are dynamically typed
-      "N802",     # Settings properties mirror environment variable names
-      "N818",     # exception names are part of the public API
-      "INP001",   # namespace packages without __init__.py by design
-      "D1",       # docstrings only where they explain a contract, not everywhere
-      "CPY001",   # no copyright headers
-      "A002",     # `id` argument in repositories and DTO is part of the API
-      "TC",       # dataclasses and TypeAdapter need annotation types at runtime
-      "RUF001",   # Cyrillic in strings is intended
-      "RUF002",   # Cyrillic in docstrings is intended
-      "RUF003",   # Cyrillic in comments is intended
-  ]
-
-  [tool.ruff.lint.flake8-quotes]
-  inline-quotes = "single"
-
-  [tool.ruff.format]
-  quote-style = "single"
-
-  [tool.ruff.lint.per-file-ignores]
-  "tests/**" = [
-      "SLF001",
-      "S101",     # `assert` is idiomatic in pytest
-      "D",        # tests do not need docstrings
-      "ANN",      # test annotations are optional
-      "FBT",      # boolean positional args in test helpers
-      "PLR2004",  # magic values are acceptable in assertions
-      "PLR0913",  # many-argument test helpers
-      "PT011",    # broad pytest.raises is acceptable in tests
-      "PT012",    # pytest.raises blocks may legitimately hold several statements
-      "ARG",      # unused fixture/helper args
-      "CPY001",   # tests do not carry copyright headers
-      "S608",     # SQL strings in tests are not injection vectors
-  ]
-
-  [tool.vulture]
-  paths = ["sources", "tests", "vulture_whitelist.py"]
-  min_confidence = 80
-  ```
+- Эталонная конфигурация `pyproject.toml` (зависимости `dev`, pyright, ruff, vulture, pytest) - в `references/tooling.md`.
 - Конфигурация общая для проекта. Новые исключения в `ignore` и `per-file-ignores` добавляются точечно, с комментарием о причине, и только когда правило противоречит архитектуре (например, имена, заданные спецификацией API). Отключать правило ради одного места нельзя - в таком месте пишется `# noqa: <код>` с причиной.
-- Vulture не знает о вызовах через фреймворки (методы `on_get`/`on_post` ресурсов falcon, фикстуры pytest, `__post_init__`). Ложные срабатывания подавляются белым списком `vulture_whitelist.py` в корне проекта, который передаётся vulture вместе с исходниками, а не понижением `min_confidence`.
+- Ложные срабатывания vulture (вызовы через фреймворки) подавляются белым списком `vulture_whitelist.py`, а не понижением `min_confidence`.
+
+# Ошибки
+Общие правила для ошибок всех слоёв. Базовые классы и размещение описаны в навыках слоёв: `AppError` - в `python-classic-app`, `DomainError` - в `python-classic-domain`.
+- Ошибки - обычные исключения Python, сторонние библиотеки для ошибок не используются.
+- Конкретные классы ошибок не содержат слова `Error` в имени: то, что это ошибка, видно по наследованию. Имя описывает ситуацию: `LoanNotFound`, `BookNotInCatalog`. Суффикс `Error` остаётся только у базовых классов (`AppError`, `DomainError`).
+- Текст сообщения формируется f-строкой в `__str__`.
+- Если у ошибки есть параметры, она оформляется датаклассом, параметры - его поля. Датакласс не делается `frozen`: при `raise` Python записывает в исключение `__traceback__`, и frozen-датакласс упадёт с `FrozenInstanceError`.
+  ```python
+  class ExtensionDaysNotPositive(DomainError):
+      def __str__(self) -> str:
+          return 'Срок продления должен быть положительным'
+
+
+  @dataclass
+  class LoanNotFound(DomainError):
+      id: int
+
+      def __str__(self) -> str:
+          return f'Выдача с id={self.id} не найдена'
+
+
+  raise LoanNotFound(id=loan_id)
+  ```
+- Адаптеры считают `AppError` и `DomainError` ожидаемыми ошибками и обрабатывают оба одинаково.
 
 # Adapters
 - Вместо пакета adapters следует сразу создавать 3 пакета `interfaces`, `infra`, `integrations`, чтобы не плодить лишнюю вложенность.
@@ -215,16 +175,10 @@ tests/                         # см. раздел "Тестирование"
 - Класс-клиент работает с моделями pydantic. Описание моделей размещается в модуле с клиентом и является описанием контракта с внешней системой.
 - Структура: `integrations/<system>/client.py` (модели и клиент), `settings.py`. Клиент сам реализует ABC из app и переводит модели pydantic в DTO app; отдельный класс-обёртка не нужен.
 - Ответ «не найдено» внешней системы превращается в `None` или пустой результат, прочие ошибки HTTP и невалидный ответ - в исключение интеграции (свой класс, не `RuntimeError`).
-- Тестирование: в unit-тестах app вместо клиента подставляется заглушка того же ABC; сам клиент тестируется против stub-сервера внешней системы (`pytest-httpserver`), без обращения к настоящей системе:
-  ```python
-  def test_get_book_not_found(httpserver):
-      httpserver.expect_request('/books/9785171183660').respond_with_data(status=404)
-      client = CatalogClient(settings=CatalogSettings(URL=httpserver.url_for('/')))
-      assert client.get_book('9785171183660') is None
-  ```
-  Проверяются: перевод ответа в DTO app, «не найдено» -> `None`, ошибки HTTP и невалидный ответ -> исключение интеграции, содержимое отправленного запроса.
+- Тестирование клиента - в `references/testing.md`.
 
 # Тестирование
+Подробные правила вынесены в `references/testing.md`: общие - в этом навыке, правила уровня - в навыке слоя. Читай их, когда пишешь или правишь тесты.
 
 ## Пирамида тестирования
 Слои архитектуры определяют пирамиду: каждый класс тестируется на уровне своего слоя, изолированно от остальных слоёв. Чем ниже уровень, тем больше тестов и тем они дешевле.
@@ -248,55 +202,12 @@ tests/                         # см. раздел "Тестирование"
   - integrations - клиенты против stub-сервера внешней системы.
   Строго говоря, это не unit-тесты (нужна БД или сеть), но тестируется один класс.
 - **Композит** - интеграционный (e2e) тест собранного приложения. Композит импортируется как есть, с тестовым окружением: тестовая БД, адреса внешних систем указывают на stub-серверы. Проверяется сборка: маршруты подключены, транзакции и аспекты навешены, подписчики зарегистрированы, ошибки обрабатываются. Бизнес-сценарии повторно не перебираются: по одному-два сценария на usecase.
-- Подробные инструкции - в разделе "Тестирование" навыка каждого слоя и адаптера.
-
-## Подмена внешних систем
-- Внешние системы подменяются на разных уровнях по-разному:
-  - в unit-тестах app - заглушкой (fake), реализующей ABC из app;
-  - в тестах клиента интеграции и в тестах композита - на сетевом уровне: тест поднимает stub-сервер внешней системы (для HTTP - `pytest-httpserver`, для прочих протоколов - тестовые аналоги: mailpit для SMTP, minio для S3 и т.п.), а адрес системы передаётся настройками.
-- Боевой код не содержит stubs и переключателей "тестовый режим": композит в тестах собирается так же, как в бою, отличаются только настройки.
-- Своя инфраструктура (БД) не подменяется: в тестах адаптеров infra и композита используется настоящая тестовая БД. Боевая БД не используется никогда.
-
-## Организация тестов
-- Тесты лежат в `tests/` и зеркалят слои:
-  ```
-  tests/
-    conftest.py                     # константы, фабрики параметров, фикстуры тестовой БД, in-memory репозитории
-    unit/
-      domain/
-        test_<aggregate>.py         # инварианты, методы, критерии агрегата
-      app/
-        conftest.py                 # in-memory fakes репозиториев, гейтвеев, внешних систем
-        test_<usecase>.py
-    adapters/
-      infra/db/
-        conftest.py                 # репозитории и гейтвеи поверх db_engine, фабрики данных
-        test_<repo>.py
-        test_<gateway>.py
-      interfaces/api/
-        conftest.py                 # create_app с фейковыми usecase
-        test_<resource>.py
-      integrations/<system>/
-        test_client.py
-    composites/
-      conftest.py                   # тестовое окружение, stub-серверы, импорт композита
-      test_<entry>.py               # test_api.py, test_<name>_scheduler.py
-  ```
-- Имя файла теста соответствует тестируемому классу (usecase, репозиторию, ресурсу, точке входа).
-- В пакете нет `__init__.py`, в том числе в `tests/`, поэтому одноимённые файлы в разных каталогах разрешаются режимом импорта pytest:
-  ```toml
-  [tool.pytest.ini_options]
-  addopts = "--import-mode=importlib"
-  ```
-- Общие константы, заглушки и фабрики живут только в `conftest.py` нужного уровня и попадают в тесты через фикстуры. `from conftest import ...` не используется.
-- Константы, общие для всех тестов (даты, статусы, названия), выносятся в корневой `conftest.py` константами верхнего регистра, а не дублируются по файлам.
-- Фикстуры выстраиваются в цепочку через зависимости, а не через импорт.
-- Порядок выполнения тестов не должен влиять на результат. Если тест падает только при запуске в определённом порядке - это дефект фикстур, а не теста.
 
 ## Общие принципы
 - Проверяется поведение, а не реализация: что вернул метод, что оказалось в хранилище, что ответил HTTP. Не проверяются количество SQL-запросов, порядок вызовов репозитория, факт и аргументы вызовов заглушек (исключение - фейковые usecase в тестах интерфейсов, где разбор запроса в параметры и есть проверяемое поведение), имена приватных полей. Тест должен падать только при изменении поведения, а не при рефакторинге внутри.
 - Ошибки проверяются по типу, а не по тексту сообщения. Текст меняется, тип ошибки - контракт.
 - Каждый уровень проверяет своё и не повторяет нижние: тест ресурса не перебирает бизнес-правила, тест композита не перебирает фильтры гейтвея.
+- Своя инфраструктура (БД) не подменяется: в тестах адаптеров infra и композита используется настоящая тестовая БД. Боевая БД не используется никогда.
 
 ## Антипаттерны
 - ❌ Импорт инстансов композита в unit-тестах и тестах адаптеров: им нужен собственный контролируемый инстанс. Импортировать композит можно только в тестах композита.
@@ -306,7 +217,6 @@ tests/                         # см. раздел "Тестирование"
 - ❌ Общая тестовая БД с ручной очисткой в порядке выполнения.
 
 # Библиотеки
-- Ошибки - встроенные исключения Python с базовыми классами `AppError` в app и `DomainError` в домене (см. `python-classic-app`, `python-classic-domain`), сторонние библиотеки для ошибок не используются.
 - `classic.criteria` - критерии (см. `python-classic-domain`).
 - `classic.signals.Hub` - сигналы (см. `python-classic-app`, `python-classic-composite`).
 - `classic.db_tools`, `classic.migrations` - работа с SQL DB (см. `python-classic-adapters-sql-db`).
