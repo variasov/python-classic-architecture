@@ -23,7 +23,7 @@ compatibility: opencode
 ### Стек и размещение
 - За основу адаптера берется веб-фреймворк falcon, остальные запрещены.
 - В качестве WSGI-сервера используется waitress.
-- Адаптер размещается в `interfaces/api/`: классы-ресурсы и DTO их ответов в `interfaces/api/resources/<resource>.py`, класс настроек в `interfaces/api/settings.py` (pydantic-settings).
+- Адаптер размещается в `interfaces/api/`: классы-ресурсы и DTO их ответов в `interfaces/api/resources/<resource>.py`, класс настроек в `interfaces/api/settings.py` (pydantic-settings). Хост и порт - чувствительные настройки и объявляются без дефолтов (см. «Настройки» в `python-classic-architecture`).
 - Сборка falcon-приложения размещается в композите (см. Точка входа).
 
 ### Ресурсы
