@@ -14,7 +14,7 @@ dev = [
 ]
 
 [tool.pyright]
-include = ["sources", "tests"]
+include = ["src", "tests"]
 exclude = [
     "**/__pycache__",
     "**/.pytest_cache",
@@ -74,7 +74,7 @@ quote-style = "single"
 ]
 
 [tool.vulture]
-paths = ["sources", "tests", "vulture_whitelist.py"]
+paths = ["src", "tests", "vulture_whitelist.py"]
 min_confidence = 80
 
 [tool.pytest.ini_options]

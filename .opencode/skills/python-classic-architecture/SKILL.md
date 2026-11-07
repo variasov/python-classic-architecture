@@ -69,10 +69,10 @@ compatibility: opencode
 
 # Layout
 - В корне проекта должен быть pyproject.toml.
-- Приложение должно быть представлено namespaced Python-пакетом. Пакет должен лежать в `sources/`:
+- Приложение должно быть представлено namespaced Python-пакетом. Пакет должен лежать в `src/`:
   ```toml
   [tool.setuptools.packages.find]
-  where = ["sources"]
+  where = ["src"]
   namespaces = true
   ```
 - Весь пакет состоит из namespace, ни одного файла __init__.py быть не должно.
@@ -85,7 +85,7 @@ compatibility: opencode
 
 Типовая структура пакета:
 ```
-sources/<package>/
+src/<package>/
   app/
     errors.py                  # AppError - базовый класс ошибок приложения
     clock.py                   # ABC Clock - источник текущего времени
