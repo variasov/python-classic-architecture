@@ -1,5 +1,0 @@
-{% import 'aggregates/loans/criteria.sql.tmpl' as macros %}
-SELECT l.id
-FROM library.loans l
-WHERE {{ traverse(criteria, macros) | safe }}
-ORDER BY l.id

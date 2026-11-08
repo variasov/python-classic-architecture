@@ -101,3 +101,8 @@ Temporary Items
 .idea/
 .vscode/
 .claude
+
+# tooling caches and local venvs
+.ruff_cache/
+mutants/
+.venv-wsl/

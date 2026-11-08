@@ -1,45 +1,44 @@
-from collections.abc import Callable
-from datetime import timedelta
-from types import ModuleType
-
-import pytest
-from library.app.commands.domain.loan import Loan, LoanPeriod
-
-from tests.conftest import RawDb
+from datetime import datetime, time, timedelta, timezone
 
 
-@pytest.fixture(scope='session')
-def scheduler_jobs(test_env: None) -> ModuleType:
-    from library.composites.interfaces.overdue_scheduler import jobs  # noqa: PLC0415
-
-    return jobs
-
-
-def test_job_creates_reminders_for_overdue_loans(
-    scheduler_jobs: ModuleType,
-    create_book: Callable[..., int],
-    register_reader: Callable[..., int],
-    raw_db: RawDb,
+def test_overdue_scheduler_request_creates_notifications(
+    api_client,
+    raw_db,
+    create_book,
+    create_reader,
+    add_copy,
+    issue_loan,
+    monkeypatch,
 ) -> None:
+    # Импорт композита требует переменных окружения из test_env.
     from library.composites.infra.clock.system import clock  # noqa: PLC0415
-    from library.composites.infra.db.repos.loans_repo import loans_repo  # noqa: PLC0415
+    from library.composites.interfaces.overdue_scheduler.jobs import (  # noqa: PLC0415
+        request_overdue_reminders,
+    )
 
-    book_id, reader_id = create_book(), register_reader()
-    today = clock.today()
-    start = today - timedelta(days=30)
-    overdue = loans_repo.save(
-        Loan(
-            reader_id=reader_id,
-            book_id=book_id,
-            inventory_number='INV-0',
-            issued_at=start,
-            period=LoanPeriod(start=start, due=today - timedelta(days=1)),
-        ),
+    book_id = create_book()
+    add_copy(book_id)
+    reader_id = create_reader()
+
+    past = datetime.combine(
+        datetime.now(tz=timezone.utc).date() - timedelta(days=60),
+        time(12),
+        tzinfo=timezone.utc,
     )
-    scheduler_jobs.request_overdue_reminder()
-    text = raw_db.scalar(
-        'SELECT text FROM library.notifications '
-        "WHERE loan_id = %(id)s AND kind = 'overdue_reminder'",
-        id=overdue.id,
+    monkeypatch.setattr(clock, 'now', lambda: past)
+    loan_id = issue_loan(reader_id, book_id)
+    monkeypatch.undo()
+
+    before = raw_db.scalar(
+        'SELECT count(*) FROM library.notifications',
     )
-    assert text is not None
+    request_overdue_reminders()
+    after = raw_db.scalar(
+        'SELECT count(*) FROM library.notifications',
+    )
+    assert after == before + 1
+
+    message = raw_db.scalar(
+        'SELECT message FROM library.notifications ORDER BY id DESC LIMIT 1',
+    )
+    assert f'id={loan_id}' in message

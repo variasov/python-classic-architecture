@@ -1,3 +1,0 @@
-from library.interfaces.overdue_scheduler.settings import OverdueSchedulerSettings
-
-overdue_scheduler_settings = OverdueSchedulerSettings()

@@ -1,0 +1,18 @@
+[tool.pyright]
+include = ["mutants/src"]
+exclude = [
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "mutants/src/*/composites",
+]
+pythonVersion = "3.10"
+typeCheckingMode = "standard"
+reportMissingTypeStubs = "none"
+reportUnknownMemberType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownParameterType = "none"
+reportUnknownVariableType = "none"
+reportUntypedFunctionDecorator = "none"
+reportMissingImports = "none"
+reportOptionalMemberAccess = "none"
+extraPaths = ["mutants/src"]

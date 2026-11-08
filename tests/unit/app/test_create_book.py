@@ -1,84 +1,87 @@
 import logging
-from collections.abc import Callable
-from typing import Any
+from datetime import date
 
 import pytest
-from library.app.clock import Clock
+
 from library.app.commands.domain.book import (
-    Book,
-    BooksRepo,
-    InvalidIsbn,
-    PublishedInFuture,
+    BookNotFound,
+    IsbnInvalid,
+    PublishedYearInFuture,
 )
-from library.app.commands.use_cases.books.create_book import (
-    CreateBook,
-    CreateBookParams,
-)
-from library.app.roles import Account, PermissionDenied
+from library.app.commands.use_cases.books.create_book import CreateBook
+from library.app.roles import Account, PermissionDenied, Permissions
 
-EVERY_BOOK = Book.published_after(year=0) | ~Book.published_after(year=0)
-
-MakeParams = Callable[..., CreateBookParams]
+TODAY = date(2026, 3, 10)
 
 
-@pytest.fixture
-def make_params(isbn: str) -> MakeParams:
-    def factory(**overrides: Any) -> CreateBookParams:
-        fields: dict[str, Any] = {
-            'isbn': isbn,
-            'title': 'Война и мир',
-            'authors': ['Толстой'],
-            'published_year': 1869,
-        }
-        return CreateBookParams(**{**fields, **overrides})
-
-    return factory
+def _usecase(books, clock_factory, test_logger) -> CreateBook:
+    return CreateBook(
+        books=books,
+        clock=clock_factory(TODAY),
+        logger=test_logger,
+    )
 
 
-@pytest.fixture
-def create_book(
-    in_memory_books_repo: BooksRepo,
-    clock: Clock,
-    logger: logging.Logger,
-) -> CreateBook:
-    return CreateBook(books=in_memory_books_repo, clock=clock, logger=logger)
-
-
-def test_create_book(
-    create_book: CreateBook,
-    in_memory_books_repo: BooksRepo,
-    admin: Account,
-    make_params: MakeParams,
+def test_create_book_saves_book(
+    in_memory_books_repo,
+    clock_factory,
+    test_logger,
+    account,
+    create_book_params_factory,
+    caplog,
 ) -> None:
-    book_id = create_book.run(make_params(), admin)
-    assert in_memory_books_repo.get_by_id(book_id).title == 'Война и мир'
+    caplog.set_level(logging.INFO)
+    usecase = _usecase(in_memory_books_repo, clock_factory, test_logger)
+    book_id = usecase.run(account, create_book_params_factory())
+    saved = in_memory_books_repo.get_by_id(book_id)
+    assert saved.title == 'Clean Code'
+    assert saved.isbn == '9780132350884'
+    assert saved.authors == ['Robert Martin']
+    record = caplog.records[0]
+    assert record.msg == 'Создана книга %r с id=%s'
+    assert record.args == ('Clean Code', book_id)
 
 
-def test_published_year_boundary(
-    create_book: CreateBook,
-    admin: Account,
-    make_params: MakeParams,
+def test_create_book_requires_permission(
+    in_memory_books_repo,
+    clock_factory,
+    test_logger,
+    create_book_params_factory,
 ) -> None:
-    create_book.run(make_params(published_year=2026), admin)
-    with pytest.raises(PublishedInFuture):
-        create_book.run(make_params(published_year=2027), admin)
+    usecase = _usecase(in_memory_books_repo, clock_factory, test_logger)
+    with pytest.raises(PermissionDenied) as exc_info:
+        usecase.run(
+            Account(login='guest', permissions=frozenset()),
+            create_book_params_factory(),
+        )
+    assert exc_info.value.login == 'guest'
+    assert exc_info.value.permission == Permissions.BOOKS_EDIT
+    with pytest.raises(BookNotFound):
+        in_memory_books_repo.get_by_id(1)
 
 
-def test_invalid_isbn(
-    create_book: CreateBook,
-    admin: Account,
-    make_params: MakeParams,
+def test_create_book_rejects_future_year(
+    in_memory_books_repo,
+    clock_factory,
+    test_logger,
+    account,
+    create_book_params_factory,
 ) -> None:
-    with pytest.raises(InvalidIsbn):
-        create_book.run(make_params(isbn='123'), admin)
+    usecase = _usecase(in_memory_books_repo, clock_factory, test_logger)
+    with pytest.raises(PublishedYearInFuture):
+        usecase.run(
+            account,
+            create_book_params_factory(published_year=2027),
+        )
 
 
-def test_permission_denied(
-    create_book: CreateBook,
-    in_memory_books_repo: BooksRepo,
-    guest: Account,
-    make_params: MakeParams,
+def test_create_book_rejects_invalid_isbn(
+    in_memory_books_repo,
+    clock_factory,
+    test_logger,
+    account,
+    create_book_params_factory,
 ) -> None:
-    with pytest.raises(PermissionDenied):
-        create_book.run(make_params(), guest)
-    assert in_memory_books_repo.find(EVERY_BOOK) == []
+    usecase = _usecase(in_memory_books_repo, clock_factory, test_logger)
+    with pytest.raises(IsbnInvalid):
+        usecase.run(account, create_book_params_factory(isbn='123'))

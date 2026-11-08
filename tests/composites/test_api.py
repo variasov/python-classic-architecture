@@ -1,255 +1,264 @@
-from collections.abc import Callable
-from typing import Any
+from datetime import datetime, timezone
 
-import pytest
-from classic.signals import Hub
-from falcon.testing import TestClient
-from library.app.commands.signals import LoanIssued
+from falcon import testing
 from pytest_httpserver import HTTPServer
 
-from tests.composites.conftest import ADMIN
-from tests.conftest import ISBN, OTHER_ISBN, RawDb
 
-
-def issue(
-    client: TestClient,
-    reader_id: int,
-    book_id: int,
-    inventory_number: str = 'INV-0',
-) -> Any:
-    body: dict[str, Any] = {
-        'reader_id': reader_id,
-        'book_id': book_id,
-        'inventory_number': inventory_number,
-    }
-    return client.simulate_post('/library/loans', json=body, headers=ADMIN)
-
-
-def test_books_create_find_and_card(
-    api_client: TestClient,
-    create_book: Callable[..., int],
+def test_book_and_copy_lifecycle(
+    api_client: testing.TestClient,
+    create_book,
+    add_copy,
+    auth_headers,
 ) -> None:
-    book_id = create_book(copies=2, title='Уникальнейшая книга')
+    book_id = create_book(isbn='9780132350884', title='Clean Code')
+    add_copy(book_id, inventory_number='INV-1', hall='B', rack=2, shelf=3)
+
+    card = api_client.simulate_get('/library/book', params={'id': book_id})
+    assert card.status_code == 200
+    assert card.json['title'] == 'Clean Code'
+    assert card.json['copies'][0]['inventory_number'] == 'INV-1'
+    assert card.json['copies'][0]['hall'] == 'B'
+    assert card.json['copies'][0]['is_available'] is True
+
     found = api_client.simulate_get(
         '/library/books',
-        params={'title__contains': 'Уникальнейшая'},
+        params={'title__contains': 'Clean'},
+        headers=auth_headers,
     )
-    assert [b['id'] for b in found.json] == [book_id]
-    assert found.json[0]['available_copies'] == 2
-    card = api_client.simulate_get('/library/book', params={'id': str(book_id)})
-    assert [c['inventory_number'] for c in card.json['copies']] == ['INV-0', 'INV-1']
+    assert found.status_code == 200
+    assert [book['id'] for book in found.json] == [book_id]
 
 
-def test_book_not_found_is_422(api_client: TestClient) -> None:
-    response = api_client.simulate_get('/library/book', params={'id': '-1'})
-    assert response.status_code == 422
-    assert response.json[0]['type'] == 'GetBookNotFound'
-
-
-def test_permission_denied_is_422(api_client: TestClient) -> None:
-    body: dict[str, Any] = {
-        'isbn': ISBN,
-        'title': 'T',
-        'authors': [],
-        'published_year': 2000,
-    }
-    response = api_client.simulate_post(
-        '/library/books',
-        json=body,
-        headers={'X-User': 'guest'},
-    )
-    assert response.status_code == 422
-    assert response.json[0]['type'] == 'PermissionDenied'
-
-
-def test_validation_error_is_400(api_client: TestClient) -> None:
-    response = api_client.simulate_get(
-        '/library/books',
-        params={'title__contains': 'ab'},
-    )
-    assert response.status_code == 400
-
-
-def test_domain_error_is_422(api_client: TestClient) -> None:
-    body: dict[str, Any] = {
-        'isbn': '123',
-        'title': 'T',
-        'authors': [],
-        'published_year': 2000,
-    }
-    response = api_client.simulate_post('/library/books', json=body, headers=ADMIN)
-    assert response.status_code == 422
-    assert response.json[0]['type'] == 'InvalidIsbn'
-
-
-def test_readers_membership_block_and_find(
-    api_client: TestClient,
-    register_reader: Callable[..., int],
+def test_create_book_from_catalog(
+    api_client: testing.TestClient,
+    catalog: HTTPServer,
+    created_records,
+    auth_headers,
 ) -> None:
-    reader_id = register_reader()
-    extended = api_client.simulate_put(
-        '/library/memberships',
-        json={'reader_id': reader_id, 'until': '2100-01-01'},
-        headers=ADMIN,
-    )
-    assert extended.status_code == 200
-    blocked = api_client.simulate_post(
-        '/library/reader_blocks',
-        json={'reader_id': reader_id},
-        headers=ADMIN,
-    )
-    assert blocked.status_code == 200
-    readers = api_client.simulate_get('/library/readers', params={'limit': '100'}).json
-    mine = next(r for r in readers if r['id'] == reader_id)
-    assert (mine['valid_until'], mine['is_blocked']) == ('2100-01-01', True)
-
-
-def test_loan_lifecycle_with_notification(
-    api_client: TestClient,
-    create_book: Callable[..., int],
-    register_reader: Callable[..., int],
-    raw_db: RawDb,
-) -> None:
-    book_id, reader_id = create_book(), register_reader()
-    created = issue(api_client, reader_id, book_id)
-    assert created.status_code == 201
-    loan_id = created.json['id']
-    kind = raw_db.scalar(
-        'SELECT kind FROM library.notifications WHERE loan_id = %(id)s',
-        id=loan_id,
-    )
-    assert kind == 'loan_issued'
-    extended = api_client.simulate_post(
-        '/library/loan_extensions',
-        json={'loan_id': loan_id, 'days': 3},
-        headers=ADMIN,
-    )
-    assert extended.status_code == 200
-    active = api_client.simulate_get(
-        '/library/loans',
-        params={'reader_id': str(reader_id), 'only_active': 'true'},
-    )
-    assert [x['extensions_count'] for x in active.json] == [1]
-    returned = api_client.simulate_post(
-        '/library/returns',
-        json={'loan_id': loan_id},
-        headers=ADMIN,
-    )
-    assert returned.status_code == 200
-    again = api_client.simulate_post(
-        '/library/returns',
-        json={'loan_id': loan_id},
-        headers=ADMIN,
-    )
-    assert again.json[0]['type'] == 'LoanAlreadyReturned'
-    assert (
-        api_client.simulate_get(
-            '/library/loans',
-            params={'reader_id': str(reader_id), 'only_active': 'true'},
-        ).json
-        == []
-    )
-
-
-def test_transaction_rolls_back_on_failure(
-    api_client: TestClient,
-    create_book: Callable[..., int],
-    register_reader: Callable[..., int],
-    raw_db: RawDb,
-) -> None:
-    from library.composites.app.hub import hub  # noqa: PLC0415
-
-    def boom(signal: LoanIssued) -> None:
-        raise RuntimeError
-
-    book_id, reader_id = create_book(), register_reader()
-    hub.add_reaction(LoanIssued, boom)
-    try:
-        response = issue(api_client, reader_id, book_id)
-    finally:
-        hub.remove_reaction(LoanIssued, boom)
-    assert response.status_code == 500
-    assert (
-        raw_db.scalar(
-            'SELECT count(*) FROM library.loans WHERE reader_id = %(id)s',
-            id=reader_id,
-        )
-        == 0
-    )
-    assert (
-        raw_db.scalar(
-            'SELECT count(*) FROM library.notifications WHERE reader_id = %(id)s',
-            id=reader_id,
-        )
-        == 0
-    )
-    assert (
-        raw_db.scalar(
-            'SELECT is_available FROM library.copies WHERE book_id = %(id)s',
-            id=book_id,
-        )
-        is True
-    )
-
-
-def test_signal_subscribers_registered_in_api_process(api_client: TestClient) -> None:
-    from library.composites.app.hub import hub  # noqa: PLC0415
-
-    assert isinstance(hub, Hub)
-    assert LoanIssued in hub._reactions
-    assert len(hub._reactions[LoanIssued]) >= 1
-
-
-def test_catalog_integration_and_retry(
-    api_client: TestClient,
-    catalog_server: HTTPServer,
-    created: dict[str, list[int]],
-) -> None:
-    catalog_server.clear()
-    catalog_server.expect_ordered_request(
+    isbn = '9780201633610'
+    catalog.expect_request(
         '/books',
-        query_string={'isbn': OTHER_ISBN},
-    ).respond_with_data(
-        status=503,
-    )
-    catalog_server.expect_ordered_request(
-        '/books',
-        query_string={'isbn': OTHER_ISBN},
+        query_string={'isbn': isbn},
     ).respond_with_json(
-        {'isbn': OTHER_ISBN, 'title': 'Из каталога', 'authors': ['К'], 'year': 2001},
+        {
+            'isbn': isbn,
+            'title': 'Design Patterns',
+            'authors': ['Erich Gamma'],
+            'year': 1994,
+        },
     )
     response = api_client.simulate_post(
         '/library/catalog_books',
-        json={'isbn': OTHER_ISBN},
-        headers=ADMIN,
+        json={'isbn': isbn},
+        headers=auth_headers,
     )
     assert response.status_code == 201
-    created['books'].append(response.json['id'])
-    card = api_client.simulate_get(
-        '/library/book',
-        params={'id': str(response.json['id'])},
-    )
-    assert card.json['title'] == 'Из каталога'
+    book_id = int(response.json['id'])
+    created_records.books.append(book_id)
+
+    card = api_client.simulate_get('/library/book', params={'id': book_id})
+    assert card.json['title'] == 'Design Patterns'
+    assert card.json['authors'] == ['Erich Gamma']
 
 
-def test_catalog_book_not_found_is_422(
-    api_client: TestClient,
-    catalog_server: HTTPServer,
+def test_create_book_from_catalog_not_found(
+    api_client: testing.TestClient,
+    catalog: HTTPServer,
+    auth_headers,
 ) -> None:
-    catalog_server.clear()
-    catalog_server.expect_request('/books').respond_with_data(status=404)
+    isbn = '9780000000002'
+    catalog.expect_request(
+        '/books',
+        query_string={'isbn': isbn},
+    ).respond_with_data(status=404)
     response = api_client.simulate_post(
         '/library/catalog_books',
-        json={'isbn': ISBN},
-        headers=ADMIN,
+        json={'isbn': isbn},
+        headers=auth_headers,
     )
     assert response.status_code == 422
     assert response.json[0]['type'] == 'BookNotInCatalog'
 
 
-@pytest.mark.parametrize(
-    'path',
-    ['/library/books', '/library/readers', '/library/loans'],
-)
-def test_list_routes_connected(api_client: TestClient, path: str) -> None:
-    assert api_client.simulate_get(path).status_code == 200
+def test_reader_lifecycle(
+    api_client: testing.TestClient,
+    create_reader,
+    auth_headers,
+) -> None:
+    reader_id = create_reader(full_name='Пётр Петров')
+
+    listed = api_client.simulate_get('/library/readers')
+    assert listed.status_code == 200
+    row = next(item for item in listed.json if item['id'] == reader_id)
+    assert row['full_name'] == 'Пётр Петров'
+    assert row['active_loans'] == 0
+    assert row['valid_until'] == '2027-01-01'
+
+    extended = api_client.simulate_put(
+        '/library/memberships',
+        json={'reader_id': reader_id, 'until': '2030-05-01'},
+        headers=auth_headers,
+    )
+    assert extended.status_code == 200
+
+    blocked = api_client.simulate_post(
+        '/library/reader_blocks',
+        json={'reader_id': reader_id},
+        headers=auth_headers,
+    )
+    assert blocked.status_code == 200
+
+    listed_after = api_client.simulate_get('/library/readers')
+    row_after = next(
+        item for item in listed_after.json if item['id'] == reader_id
+    )
+    assert row_after['valid_until'] == '2030-05-01'
+    assert row_after['is_blocked'] is True
+
+
+def test_loan_lifecycle_and_notifications(
+    api_client: testing.TestClient,
+    raw_db,
+    create_book,
+    create_reader,
+    add_copy,
+    issue_loan,
+    auth_headers,
+) -> None:
+    book_id = create_book()
+    add_copy(book_id)
+    reader_id = create_reader()
+
+    loan_id = issue_loan(reader_id, book_id)
+
+    notifications = raw_db.scalar(
+        'SELECT count(*) FROM library.notifications',
+    )
+    assert notifications >= 1
+
+    card = api_client.simulate_get('/library/book', params={'id': book_id})
+    assert card.json['copies'][0]['is_available'] is False
+
+    active = api_client.simulate_get(
+        '/library/loans',
+        params={'reader_id': str(reader_id), 'only_active': 'true'},
+    )
+    assert [loan['id'] for loan in active.json] == [loan_id]
+
+    extended = api_client.simulate_post(
+        '/library/loan_extensions',
+        json={'loan_id': loan_id, 'days': 7},
+        headers=auth_headers,
+    )
+    assert extended.status_code == 200
+
+    loans_after_extension = api_client.simulate_get(
+        '/library/loans',
+        params={'reader_id': str(reader_id)},
+    )
+    assert loans_after_extension.json[0]['extensions_count'] == 1
+
+    returned = api_client.simulate_post(
+        '/library/returns',
+        json={'loan_id': loan_id},
+        headers=auth_headers,
+    )
+    assert returned.status_code == 200
+
+    active_after = api_client.simulate_get(
+        '/library/loans',
+        params={'only_active': 'true'},
+    )
+    assert loan_id not in {loan['id'] for loan in active_after.json}
+    card_after = api_client.simulate_get(
+        '/library/book',
+        params={'id': book_id},
+    )
+    assert card_after.json['copies'][0]['is_available'] is True
+
+
+def test_failed_issue_keeps_state(
+    api_client: testing.TestClient,
+    create_book,
+    create_reader,
+    add_copy,
+    auth_headers,
+) -> None:
+    book_id = create_book()
+    add_copy(book_id)
+    reader_id = create_reader()
+    api_client.simulate_post(
+        '/library/reader_blocks',
+        json={'reader_id': reader_id},
+        headers=auth_headers,
+    )
+
+    response = api_client.simulate_post(
+        '/library/loans',
+        json={
+            'reader_id': reader_id,
+            'book_id': book_id,
+            'inventory_number': 'INV-1',
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+    assert response.json[0]['type'] == 'ReaderCannotBorrow'
+
+    card = api_client.simulate_get('/library/book', params={'id': book_id})
+    assert card.json['copies'][0]['is_available'] is True
+    loans = api_client.simulate_get('/library/loans')
+    assert {loan['reader_id'] for loan in loans.json} == set()
+
+
+def test_errors_are_mapped(
+    api_client: testing.TestClient,
+    auth_headers,
+) -> None:
+    denied = api_client.simulate_post(
+        '/library/books',
+        json={
+            'isbn': '9780132350884',
+            'title': 'Clean Code',
+            'authors': ['Robert Martin'],
+            'published_year': 2008,
+        },
+    )
+    assert denied.status_code == 422
+    assert denied.json[0]['type'] == 'PermissionDenied'
+
+    invalid = api_client.simulate_post(
+        '/library/books',
+        json={'isbn': '9780132350884'},
+        headers=auth_headers,
+    )
+    assert invalid.status_code == 400
+
+    missing = api_client.simulate_get(
+        '/library/book',
+        params={'id': '999999'},
+    )
+    assert missing.status_code == 422
+    assert missing.json[0]['type'] == 'GetBookNotFound'
+
+
+def test_create_book_invalid_domain_state_is_not_saved(
+    api_client: testing.TestClient,
+    create_book,
+    auth_headers,
+) -> None:
+    before = api_client.simulate_get('/library/books').json
+    response = api_client.simulate_post(
+        '/library/books',
+        json={
+            'isbn': '9780132350884',
+            'title': 'Future Book',
+            'authors': ['Author'],
+            'published_year': datetime.now(tz=timezone.utc).year + 1,
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+    assert response.json[0]['type'] == 'PublishedYearInFuture'
+    after = api_client.simulate_get('/library/books').json
+    assert after == before

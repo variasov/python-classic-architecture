@@ -1,0 +1,16 @@
+{# Таблица books - алиас b. #}
+{% macro has_available_copies(criteria) -%}
+    EXISTS (
+        SELECT 1
+        FROM library.copies c
+        WHERE c.book_id = b.id AND c.is_available
+    )
+{%- endmacro %}
+
+{% macro published_after(criteria) -%}
+    b.published_year > {{ criteria.year }}
+{%- endmacro %}
+
+{% macro written_by(criteria) -%}
+    {{ criteria.author }} = ANY(b.authors)
+{%- endmacro %}

@@ -226,10 +226,9 @@
 
 ## Ограничения
 
-- Python ≥ 3.10, пакет `library` в `sources/`, namespace-пакеты без `__init__.py`.
+- Python ≥ 3.10, пакет `library` в `src/`, namespace-пакеты без `__init__.py`.
 - Зависимости:
   - `falcon`, `waitress`, `pydantic`, `pydantic-settings`, `psycopg[binary]`;
   - `classic-db-tools`, `classic-migrations`, `classic-criteria`, `classic-signals`, `classic-error-handling`, `classic-scheduler`;
   - `urllib3`;
   - dev: `pytest`, `hypothesis`.
-- Внутрикорпоративные пакеты (`evraz-*`) не используются.

@@ -1,170 +1,388 @@
-from datetime import date, timedelta
+from datetime import date
 
 import pytest
+
 from library.app.commands.domain.book import (
-    Book,
-    BooksRepo,
-    CopyNotAvailable,
-    ShelfLocation,
+    BookNotFound,
+    CopyNotFound,
+    NoAvailableCopies,
 )
-from library.app.commands.domain.issue_loan import (
-    IssueLoan,
+from library.app.commands.domain.issue_loan import IssueLoan
+from library.app.commands.domain.loan import Loan, LoanPeriod
+from library.app.commands.domain.reader import (
     LoanLimitExceeded,
+    Membership,
     ReaderCannotBorrow,
     ReaderHasOverdueLoans,
+    ReaderNotFound,
 )
-from library.app.commands.domain.loan import Loan, LoanPeriod, LoansRepo
-from library.app.commands.domain.reader import (
-    Contact,
-    Membership,
-    Reader,
-    ReadersRepo,
-)
-from library.app.commands.domain.return_loan import ReturnLoan
-
-TODAY = date(2026, 6, 15)
 
 
-@pytest.fixture
-def issue_loan(
-    in_memory_readers_repo: ReadersRepo,
-    in_memory_books_repo: BooksRepo,
-    in_memory_loans_repo: LoansRepo,
+def _issue_loan(
+    books_repo,
+    readers_repo,
+    loans_repo,
 ) -> IssueLoan:
     return IssueLoan(
-        readers=in_memory_readers_repo,
-        books=in_memory_books_repo,
-        loans=in_memory_loans_repo,
+        readers=readers_repo,
+        books=books_repo,
+        loans=loans_repo,
     )
 
 
-def add_reader(
-    repo: ReadersRepo,
-    tier: str = 'basic',
-    *,
-    is_blocked: bool = False,
-) -> int:
-    reader = Reader(
-        full_name='Иван',
-        contact=Contact(email='i@e.com'),
-        membership=Membership(tier=tier, valid_until=TODAY),
-        is_blocked=is_blocked,
+def test_issue_loan_success(
+    in_memory_books_repo,
+    in_memory_readers_repo,
+    in_memory_loans_repo,
+    book_factory,
+    reader_factory,
+) -> None:
+    book = in_memory_books_repo.save(book_factory())
+    reader = in_memory_readers_repo.save(reader_factory())
+    usecase = _issue_loan(
+        in_memory_books_repo,
+        in_memory_readers_repo,
+        in_memory_loans_repo,
     )
-    saved_id = repo.save(reader).id
-    assert saved_id is not None
-    return saved_id
+    loan = usecase.run(
+        reader_id=reader.id,
+        book_id=book.id,
+        inventory_number='INV-1',
+        on=date(2026, 3, 10),
+    )
+    assert loan.id == 1
+    assert loan.reader_id == reader.id
+    assert loan.book_id == book.id
+    assert loan.inventory_number == 'INV-1'
+    assert loan.issued_at == date(2026, 3, 10)
+    assert loan.period.start == date(2026, 3, 10)
+    assert loan.period.due == date(2026, 3, 24)
+    saved = in_memory_loans_repo.get_by_id(loan.id)
+    assert saved == loan
+    assert in_memory_books_repo.get_by_id(book.id).copies[0].is_available is False
 
 
-def add_book(repo: BooksRepo, copies: int = 1) -> int:
-    book = Book(isbn='9785171183660', title='T', authors=['A'], published_year=2000)
-    for number in range(copies):
-        book.add_copy(f'INV-{number}', ShelfLocation(hall='A', rack=1, shelf=1))
-    saved_id = repo.save(book).id
-    assert saved_id is not None
-    return saved_id
-
-
-def test_issue_takes_copy_and_creates_loan(
-    issue_loan: IssueLoan,
-    in_memory_readers_repo: ReadersRepo,
-    in_memory_books_repo: BooksRepo,
-    in_memory_loans_repo: LoansRepo,
+def test_issue_loan_requires_active_membership(
+    in_memory_books_repo,
+    in_memory_readers_repo,
+    in_memory_loans_repo,
+    book_factory,
+    reader_factory,
 ) -> None:
-    reader_id = add_reader(in_memory_readers_repo)
-    book_id = add_book(in_memory_books_repo)
-    loan = issue_loan.run(reader_id, book_id, 'INV-0', TODAY, days=14)
-    assert loan.period == LoanPeriod(start=TODAY, due=TODAY + timedelta(days=14))
-    assert not in_memory_books_repo.get_by_id(book_id).copies[0].is_available
-    assert loan.id is not None
-    assert in_memory_loans_repo.get_by_id(loan.id).reader_id == reader_id
-
-
-def test_blocked_reader_cannot_borrow(
-    issue_loan: IssueLoan,
-    in_memory_readers_repo: ReadersRepo,
-    in_memory_books_repo: BooksRepo,
-) -> None:
-    reader_id = add_reader(in_memory_readers_repo, is_blocked=True)
-    book_id = add_book(in_memory_books_repo)
-    with pytest.raises(ReaderCannotBorrow):
-        issue_loan.run(reader_id, book_id, 'INV-0', TODAY, days=14)
-
-
-def test_expired_membership_boundary(
-    issue_loan: IssueLoan,
-    in_memory_readers_repo: ReadersRepo,
-    in_memory_books_repo: BooksRepo,
-) -> None:
-    reader_id = add_reader(in_memory_readers_repo)
-    book_id = add_book(in_memory_books_repo, copies=2)
-    issue_loan.run(reader_id, book_id, 'INV-0', TODAY, days=14)
-    with pytest.raises(ReaderCannotBorrow):
-        issue_loan.run(reader_id, book_id, 'INV-1', TODAY + timedelta(days=1), days=14)
-
-
-def test_unavailable_copy(
-    issue_loan: IssueLoan,
-    in_memory_readers_repo: ReadersRepo,
-    in_memory_books_repo: BooksRepo,
-) -> None:
-    reader_id = add_reader(in_memory_readers_repo)
-    other_id = add_reader(in_memory_readers_repo)
-    book_id = add_book(in_memory_books_repo)
-    issue_loan.run(reader_id, book_id, 'INV-0', TODAY, days=14)
-    with pytest.raises(CopyNotAvailable):
-        issue_loan.run(other_id, book_id, 'INV-0', TODAY, days=14)
-
-
-def test_loan_limit_by_tier(
-    issue_loan: IssueLoan,
-    in_memory_readers_repo: ReadersRepo,
-    in_memory_books_repo: BooksRepo,
-) -> None:
-    reader_id = add_reader(in_memory_readers_repo)
-    book_id = add_book(in_memory_books_repo, copies=4)
-    for number in range(3):
-        issue_loan.run(reader_id, book_id, f'INV-{number}', TODAY, days=14)
-    with pytest.raises(LoanLimitExceeded):
-        issue_loan.run(reader_id, book_id, 'INV-3', TODAY, days=14)
-
-
-def test_overdue_loan_blocks_new_issue(
-    issue_loan: IssueLoan,
-    in_memory_readers_repo: ReadersRepo,
-    in_memory_books_repo: BooksRepo,
-    in_memory_loans_repo: LoansRepo,
-) -> None:
-    reader_id = add_reader(in_memory_readers_repo, tier='premium')
-    book_id = add_book(in_memory_books_repo)
-    in_memory_loans_repo.save(
-        Loan(
-            reader_id=reader_id,
-            book_id=book_id,
-            inventory_number='X',
-            issued_at=TODAY - timedelta(days=30),
-            period=LoanPeriod(
-                start=TODAY - timedelta(days=30),
-                due=TODAY - timedelta(days=1),
+    book = in_memory_books_repo.save(book_factory())
+    reader = in_memory_readers_repo.save(
+        reader_factory(
+            membership=Membership(
+                tier='basic',
+                valid_until=date(2026, 3, 9),
             ),
         ),
     )
-    with pytest.raises(ReaderHasOverdueLoans):
-        issue_loan.run(reader_id, book_id, 'INV-0', TODAY, days=14)
-
-
-def test_return_loan_closes_loan_and_returns_copy(
-    issue_loan: IssueLoan,
-    in_memory_readers_repo: ReadersRepo,
-    in_memory_books_repo: BooksRepo,
-    in_memory_loans_repo: LoansRepo,
-) -> None:
-    reader_id = add_reader(in_memory_readers_repo)
-    book_id = add_book(in_memory_books_repo)
-    loan = issue_loan.run(reader_id, book_id, 'INV-0', TODAY, days=14)
-    assert loan.id is not None
-    ReturnLoan(loans=in_memory_loans_repo, books=in_memory_books_repo).run(
-        loan.id,
-        TODAY,
+    usecase = _issue_loan(
+        in_memory_books_repo,
+        in_memory_readers_repo,
+        in_memory_loans_repo,
     )
-    assert in_memory_loans_repo.get_by_id(loan.id).returned()
-    assert in_memory_books_repo.get_by_id(book_id).copies[0].is_available
+    with pytest.raises(ReaderCannotBorrow) as exc_info:
+        usecase.run(
+            reader_id=reader.id,
+            book_id=book.id,
+            inventory_number='INV-1',
+            on=date(2026, 3, 10),
+        )
+    assert exc_info.value.reader_id == reader.id
+
+
+def test_issue_loan_rejects_blocked_reader(
+    in_memory_books_repo,
+    in_memory_readers_repo,
+    in_memory_loans_repo,
+    book_factory,
+    reader_factory,
+) -> None:
+    book = in_memory_books_repo.save(book_factory())
+    reader = in_memory_readers_repo.save(reader_factory(is_blocked=True))
+    usecase = _issue_loan(
+        in_memory_books_repo,
+        in_memory_readers_repo,
+        in_memory_loans_repo,
+    )
+    with pytest.raises(ReaderCannotBorrow) as exc_info:
+        usecase.run(
+            reader_id=reader.id,
+            book_id=book.id,
+            inventory_number='INV-1',
+            on=date(2026, 3, 10),
+        )
+    assert exc_info.value.reader_id == reader.id
+
+
+def test_issue_loan_respects_limit(
+    in_memory_books_repo,
+    in_memory_readers_repo,
+    in_memory_loans_repo,
+    book_factory,
+    reader_factory,
+    loan_factory,
+) -> None:
+    book = in_memory_books_repo.save(book_factory())
+    reader = in_memory_readers_repo.save(reader_factory())
+    for _ in range(3):
+        in_memory_loans_repo.save(loan_factory(reader_id=reader.id))
+    usecase = _issue_loan(
+        in_memory_books_repo,
+        in_memory_readers_repo,
+        in_memory_loans_repo,
+    )
+    with pytest.raises(LoanLimitExceeded) as exc_info:
+        usecase.run(
+            reader_id=reader.id,
+            book_id=book.id,
+            inventory_number='INV-1',
+            on=date(2026, 3, 10),
+        )
+    assert exc_info.value.reader_id == reader.id
+    assert exc_info.value.limit == 3
+
+
+def test_issue_loan_does_not_count_returned_loans(
+    in_memory_books_repo,
+    in_memory_readers_repo,
+    in_memory_loans_repo,
+    book_factory,
+    reader_factory,
+    loan_factory,
+) -> None:
+    book = in_memory_books_repo.save(book_factory())
+    reader = in_memory_readers_repo.save(reader_factory())
+    for _ in range(3):
+        in_memory_loans_repo.save(
+            loan_factory(
+                reader_id=reader.id,
+                returned_at=date(2026, 3, 10),
+            ),
+        )
+    usecase = _issue_loan(
+        in_memory_books_repo,
+        in_memory_readers_repo,
+        in_memory_loans_repo,
+    )
+    loan = usecase.run(
+        reader_id=reader.id,
+        book_id=book.id,
+        inventory_number='INV-1',
+        on=date(2026, 3, 10),
+    )
+    assert loan.reader_id == reader.id
+
+
+def test_issue_loan_ignores_other_readers_active_loans(
+    in_memory_books_repo,
+    in_memory_readers_repo,
+    in_memory_loans_repo,
+    book_factory,
+    reader_factory,
+    loan_factory,
+) -> None:
+    book = in_memory_books_repo.save(book_factory())
+    reader = in_memory_readers_repo.save(reader_factory())
+    other = in_memory_readers_repo.save(reader_factory(full_name='Other'))
+    for _ in range(3):
+        in_memory_loans_repo.save(loan_factory(reader_id=other.id))
+    usecase = _issue_loan(
+        in_memory_books_repo,
+        in_memory_readers_repo,
+        in_memory_loans_repo,
+    )
+    loan = usecase.run(
+        reader_id=reader.id,
+        book_id=book.id,
+        inventory_number='INV-1',
+        on=date(2026, 3, 10),
+    )
+    assert loan.reader_id == reader.id
+
+
+def test_issue_loan_rejects_reader_with_overdue_loans(
+    in_memory_books_repo,
+    in_memory_readers_repo,
+    in_memory_loans_repo,
+    book_factory,
+    reader_factory,
+    loan_factory,
+) -> None:
+    book = in_memory_books_repo.save(book_factory())
+    reader = in_memory_readers_repo.save(reader_factory())
+    in_memory_loans_repo.save(
+        loan_factory(
+            reader_id=reader.id,
+            issued_at=date(2026, 2, 1),
+            period=LoanPeriod(
+                start=date(2026, 2, 1),
+                due=date(2026, 2, 15),
+            ),
+        ),
+    )
+    usecase = _issue_loan(
+        in_memory_books_repo,
+        in_memory_readers_repo,
+        in_memory_loans_repo,
+    )
+    with pytest.raises(ReaderHasOverdueLoans) as exc_info:
+        usecase.run(
+            reader_id=reader.id,
+            book_id=book.id,
+            inventory_number='INV-1',
+            on=date(2026, 3, 10),
+        )
+    assert exc_info.value.reader_id == reader.id
+
+
+def test_issue_loan_ignores_other_readers_overdue_loans(
+    in_memory_books_repo,
+    in_memory_readers_repo,
+    in_memory_loans_repo,
+    book_factory,
+    reader_factory,
+    loan_factory,
+) -> None:
+    book = in_memory_books_repo.save(book_factory())
+    reader = in_memory_readers_repo.save(reader_factory())
+    other = in_memory_readers_repo.save(reader_factory(full_name='Other'))
+    in_memory_loans_repo.save(
+        loan_factory(
+            reader_id=other.id,
+            issued_at=date(2026, 2, 1),
+            period=LoanPeriod(
+                start=date(2026, 2, 1),
+                due=date(2026, 2, 15),
+            ),
+        ),
+    )
+    usecase = _issue_loan(
+        in_memory_books_repo,
+        in_memory_readers_repo,
+        in_memory_loans_repo,
+    )
+    loan = usecase.run(
+        reader_id=reader.id,
+        book_id=book.id,
+        inventory_number='INV-1',
+        on=date(2026, 3, 10),
+    )
+    assert loan.reader_id == reader.id
+
+
+def test_issue_loan_rejects_book_without_available_copies(
+    in_memory_books_repo,
+    in_memory_readers_repo,
+    in_memory_loans_repo,
+    book_factory,
+    copy_factory,
+    reader_factory,
+) -> None:
+    book = in_memory_books_repo.save(
+        book_factory(copies=[copy_factory(is_available=False)]),
+    )
+    reader = in_memory_readers_repo.save(reader_factory())
+    usecase = _issue_loan(
+        in_memory_books_repo,
+        in_memory_readers_repo,
+        in_memory_loans_repo,
+    )
+    with pytest.raises(NoAvailableCopies) as exc_info:
+        usecase.run(
+            reader_id=reader.id,
+            book_id=book.id,
+            inventory_number='INV-1',
+            on=date(2026, 3, 10),
+        )
+    assert exc_info.value.book_id == book.id
+
+
+def test_issue_loan_missing_copy(
+    in_memory_books_repo,
+    in_memory_readers_repo,
+    in_memory_loans_repo,
+    book_factory,
+    reader_factory,
+) -> None:
+    book = in_memory_books_repo.save(book_factory())
+    reader = in_memory_readers_repo.save(reader_factory())
+    usecase = _issue_loan(
+        in_memory_books_repo,
+        in_memory_readers_repo,
+        in_memory_loans_repo,
+    )
+    with pytest.raises(CopyNotFound):
+        usecase.run(
+            reader_id=reader.id,
+            book_id=book.id,
+            inventory_number='MISSING',
+            on=date(2026, 3, 10),
+        )
+
+
+def test_issue_loan_unknown_reader(
+    in_memory_books_repo,
+    in_memory_readers_repo,
+    in_memory_loans_repo,
+    book_factory,
+) -> None:
+    book = in_memory_books_repo.save(book_factory())
+    usecase = _issue_loan(
+        in_memory_books_repo,
+        in_memory_readers_repo,
+        in_memory_loans_repo,
+    )
+    with pytest.raises(ReaderNotFound):
+        usecase.run(
+            reader_id=999,
+            book_id=book.id,
+            inventory_number='INV-1',
+            on=date(2026, 3, 10),
+        )
+
+
+def test_issue_loan_unknown_book(
+    in_memory_books_repo,
+    in_memory_readers_repo,
+    in_memory_loans_repo,
+    reader_factory,
+) -> None:
+    reader = in_memory_readers_repo.save(reader_factory())
+    usecase = _issue_loan(
+        in_memory_books_repo,
+        in_memory_readers_repo,
+        in_memory_loans_repo,
+    )
+    with pytest.raises(BookNotFound):
+        usecase.run(
+            reader_id=reader.id,
+            book_id=999,
+            inventory_number='INV-1',
+            on=date(2026, 3, 10),
+        )
+
+
+def test_issue_loan_returns_loan_instance(
+    in_memory_books_repo,
+    in_memory_readers_repo,
+    in_memory_loans_repo,
+    book_factory,
+    reader_factory,
+) -> None:
+    book = in_memory_books_repo.save(book_factory())
+    reader = in_memory_readers_repo.save(reader_factory())
+    usecase = _issue_loan(
+        in_memory_books_repo,
+        in_memory_readers_repo,
+        in_memory_loans_repo,
+    )
+    loan = usecase.run(
+        reader_id=reader.id,
+        book_id=book.id,
+        inventory_number='INV-1',
+        on=date(2026, 3, 10),
+    )
+    assert isinstance(loan, Loan)

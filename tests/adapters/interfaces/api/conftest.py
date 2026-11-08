@@ -1,145 +1,111 @@
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, cast
 
 import pytest
-from falcon.testing import TestClient
-from library.composites.interfaces.api.factory import create_app
-from library.interfaces.api.resources.books import (
-    BookResource,
-    BooksResource,
-    CatalogBooksResource,
-    CopiesResource,
-)
-from library.interfaces.api.resources.loans import (
-    LoanExtensionsResource,
-    LoansResource,
-    ReturnsResource,
-)
-from library.interfaces.api.resources.readers import (
-    MembershipsResource,
-    ReaderBlocksResource,
-    ReadersResource,
-)
+from falcon import testing
 
-USERS = {'admin': ['books.edit'], 'guest': []}
+from library.interfaces.api.app_factory import create_app
+from library.interfaces.api.middleware import AuthMiddleware
+from library.interfaces.api.resources.book import BookResource
+from library.interfaces.api.resources.books import BooksResource
+from library.interfaces.api.resources.catalog_books import (
+    CatalogBooksResource,
+)
+from library.interfaces.api.resources.copies import CopiesResource
+from library.interfaces.api.resources.loan_extensions import (
+    LoanExtensionsResource,
+)
+from library.interfaces.api.resources.loans import LoansResource
+from library.interfaces.api.resources.memberships import MembershipsResource
+from library.interfaces.api.resources.reader_blocks import (
+    ReaderBlocksResource,
+)
+from library.interfaces.api.resources.readers import ReadersResource
+from library.interfaces.api.resources.returns import ReturnsResource
 
 
 class FakeUseCase:
-    """Запоминает полученные параметры, возвращает результат или бросает ошибку."""
-
-    def __init__(self, result: Any = None, error: Exception | None = None) -> None:
+    def __init__(
+        self,
+        result: Any = None,
+        error: Exception | None = None,
+    ) -> None:
         self.result = result
         self.error = error
         self.calls: list[tuple[Any, ...]] = []
 
-    def run(self, *args: Any) -> Any:
-        self.calls.append(args)
-        if self.error:
+    def run(self, *args: Any, **kwargs: Any) -> Any:
+        self.calls.append((*args, kwargs))
+        if self.error is not None:
             raise self.error
         return self.result
 
 
-def fake(use_case: FakeUseCase) -> Any:
-    """Фейки не наследуют usecase: структурной совместимости по run достаточно."""
-    return use_case
-
-
-@pytest.fixture
-def find_books() -> FakeUseCase:
-    return FakeUseCase(result=[])
-
-
-@pytest.fixture
-def create_book() -> FakeUseCase:
-    return FakeUseCase(result=1)
-
-
-@pytest.fixture
-def get_book() -> FakeUseCase:
-    return FakeUseCase()
-
-
-@pytest.fixture
-def issue_loan() -> FakeUseCase:
-    return FakeUseCase(result=5)
-
-
-@pytest.fixture
-def find_loans() -> FakeUseCase:
-    return FakeUseCase(result=[])
-
-
-@pytest.fixture
-def register_reader() -> FakeUseCase:
-    return FakeUseCase(result=3)
-
-
-@pytest.fixture
-def find_readers() -> FakeUseCase:
-    return FakeUseCase(result=[])
-
-
-@pytest.fixture
-def extend_membership() -> FakeUseCase:
-    return FakeUseCase()
-
-
-@pytest.fixture
-def extend_loan() -> FakeUseCase:
-    return FakeUseCase()
-
-
-@pytest.fixture
-def return_loan() -> FakeUseCase:
-    return FakeUseCase()
-
-
-@pytest.fixture
-def block_reader() -> FakeUseCase:
-    return FakeUseCase()
-
-
-@pytest.fixture
-def add_copy() -> FakeUseCase:
-    return FakeUseCase()
-
-
-@pytest.fixture
-def create_from_catalog() -> FakeUseCase:
-    return FakeUseCase(result=9)
-
-
-@pytest.fixture
-def client(
-    find_books: FakeUseCase,
-    create_book: FakeUseCase,
-    get_book: FakeUseCase,
-    issue_loan: FakeUseCase,
-    find_loans: FakeUseCase,
-    register_reader: FakeUseCase,
-    find_readers: FakeUseCase,
-    extend_membership: FakeUseCase,
-    extend_loan: FakeUseCase,
-    return_loan: FakeUseCase,
-    block_reader: FakeUseCase,
-    add_copy: FakeUseCase,
-    create_from_catalog: FakeUseCase,
-) -> TestClient:
-    app = create_app(
-        users=USERS,
-        books=BooksResource(find_books=fake(find_books), create_book=fake(create_book)),
-        book=BookResource(get_book=fake(get_book)),
-        catalog_books=CatalogBooksResource(
-            create_book_from_catalog=fake(create_from_catalog),
-        ),
-        copies=CopiesResource(add_copy=fake(add_copy)),
-        readers=ReadersResource(
-            find_readers=fake(find_readers),
-            register_reader=fake(register_reader),
-        ),
-        memberships=MembershipsResource(extend_membership=fake(extend_membership)),
-        reader_blocks=ReaderBlocksResource(block_reader=fake(block_reader)),
-        loans=LoansResource(find_loans=fake(find_loans), issue_loan=fake(issue_loan)),
-        loan_extensions=LoanExtensionsResource(extend_loan=fake(extend_loan)),
-        returns=ReturnsResource(return_loan=fake(return_loan)),
+@dataclass
+class ApiHarness:
+    find_books: FakeUseCase = field(default_factory=FakeUseCase)
+    create_book: FakeUseCase = field(default_factory=FakeUseCase)
+    get_book: FakeUseCase = field(default_factory=FakeUseCase)
+    create_book_from_catalog: FakeUseCase = field(
+        default_factory=FakeUseCase,
     )
-    return TestClient(app)
+    add_copy: FakeUseCase = field(default_factory=FakeUseCase)
+    find_readers: FakeUseCase = field(default_factory=FakeUseCase)
+    register_reader: FakeUseCase = field(default_factory=FakeUseCase)
+    extend_membership: FakeUseCase = field(default_factory=FakeUseCase)
+    block_reader: FakeUseCase = field(default_factory=FakeUseCase)
+    find_loans: FakeUseCase = field(default_factory=FakeUseCase)
+    issue_loan: FakeUseCase = field(default_factory=FakeUseCase)
+    extend_loan: FakeUseCase = field(default_factory=FakeUseCase)
+    return_loan: FakeUseCase = field(default_factory=FakeUseCase)
+    client: testing.TestClient = field(init=False)
+
+    def __post_init__(self) -> None:
+        app = create_app(
+            books=BooksResource(
+                find_books=cast('Any', self.find_books),
+                create_book=cast('Any', self.create_book),
+            ),
+            book=BookResource(get_book=cast('Any', self.get_book)),
+            catalog_books=CatalogBooksResource(
+                create_book=cast('Any', self.create_book_from_catalog),
+            ),
+            copies=CopiesResource(add_copy=cast('Any', self.add_copy)),
+            readers=ReadersResource(
+                find_readers=cast('Any', self.find_readers),
+                register_reader=cast('Any', self.register_reader),
+            ),
+            memberships=MembershipsResource(
+                extend_membership=cast('Any', self.extend_membership),
+            ),
+            reader_blocks=ReaderBlocksResource(
+                block_reader=cast('Any', self.block_reader),
+            ),
+            loans=LoansResource(
+                find_loans=cast('Any', self.find_loans),
+                issue_loan=cast('Any', self.issue_loan),
+            ),
+            loan_extensions=LoanExtensionsResource(
+                extend_loan=cast('Any', self.extend_loan),
+            ),
+            returns=ReturnsResource(
+                return_loan=cast('Any', self.return_loan),
+            ),
+            auth=AuthMiddleware(
+                users={
+                    'admin': frozenset(
+                        {
+                            'books.edit',
+                            'readers.edit',
+                            'loans.edit',
+                        },
+                    ),
+                },
+            ),
+        )
+        self.client = testing.TestClient(app)
+
+
+@pytest.fixture
+def api() -> ApiHarness:
+    return ApiHarness()

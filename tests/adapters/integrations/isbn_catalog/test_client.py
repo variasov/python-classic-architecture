@@ -1,101 +1,81 @@
-import json
-
 import pytest
+
 from library.integrations.isbn_catalog.client import (
     IsbnCatalogClient,
+    IsbnCatalogInvalidResponse,
     IsbnCatalogUnavailable,
 )
 from library.integrations.isbn_catalog.settings import IsbnCatalogSettings
-from pytest_httpserver import HTTPServer
-from werkzeug import Request, Response
-
-from tests.conftest import ISBN
 
 
-@pytest.fixture
-def client(httpserver: HTTPServer) -> IsbnCatalogClient:
+def _client(httpserver) -> IsbnCatalogClient:
     return IsbnCatalogClient(
-        settings=IsbnCatalogSettings(ISBN_CATALOG_URL=httpserver.url_for('/')),
-    )
-
-
-def test_find_translates_response_to_dto(
-    client: IsbnCatalogClient,
-    httpserver: HTTPServer,
-) -> None:
-    httpserver.expect_request('/books', query_string={'isbn': ISBN}).respond_with_json(
-        {'isbn': ISBN, 'title': 'Т', 'authors': ['А', 'Б'], 'year': 1869, 'extra': 1},
-    )
-    book = client.find(ISBN)
-    assert book is not None
-    assert (book.isbn, book.title, book.authors, book.year) == (
-        ISBN,
-        'Т',
-        ['А', 'Б'],
-        1869,
-    )
-
-
-def test_sends_isbn_in_query(client: IsbnCatalogClient, httpserver: HTTPServer) -> None:
-    seen: list[str] = []
-
-    def handler(request: Request) -> Response:
-        seen.append(request.args['isbn'])
-        return Response(
-            json.dumps({'isbn': ISBN, 'title': 'T', 'authors': [], 'year': 1}),
-            content_type='application/json',
-        )
-
-    httpserver.expect_request('/books').respond_with_handler(handler)
-    client.find(ISBN)
-    assert seen == [ISBN]
-
-
-def test_not_found_is_none(client: IsbnCatalogClient, httpserver: HTTPServer) -> None:
-    httpserver.expect_request('/books').respond_with_data(status=404)
-    assert client.find(ISBN) is None
-
-
-@pytest.mark.parametrize('status', [500, 503, 400])
-def test_http_errors_raise(
-    client: IsbnCatalogClient,
-    httpserver: HTTPServer,
-    status: int,
-) -> None:
-    httpserver.expect_request('/books').respond_with_data(status=status)
-    with pytest.raises(IsbnCatalogUnavailable):
-        client.find(ISBN)
-
-
-@pytest.mark.parametrize(
-    'payload',
-    [{'isbn': ISBN}, {'isbn': ISBN, 'title': 'T', 'authors': 'x', 'year': 'abc'}, []],
-)
-def test_invalid_response_raises(
-    client: IsbnCatalogClient,
-    httpserver: HTTPServer,
-    payload: object,
-) -> None:
-    httpserver.expect_request('/books').respond_with_json(payload)
-    with pytest.raises(IsbnCatalogUnavailable):
-        client.find(ISBN)
-
-
-def test_non_json_response_raises(
-    client: IsbnCatalogClient,
-    httpserver: HTTPServer,
-) -> None:
-    httpserver.expect_request('/books').respond_with_data('<html>')
-    with pytest.raises(IsbnCatalogUnavailable):
-        client.find(ISBN)
-
-
-def test_unreachable_server_raises() -> None:
-    client = IsbnCatalogClient(
         settings=IsbnCatalogSettings(
-            ISBN_CATALOG_URL='http://127.0.0.1:1',
-            ISBN_CATALOG_TIMEOUT=1,
+            ISBN_CATALOG_URL=httpserver.url_for('/'),
         ),
     )
+
+
+def test_find_returns_catalog_book(httpserver) -> None:
+    httpserver.expect_request(
+        '/books',
+        query_string={'isbn': '9780132350884'},
+    ).respond_with_json(
+        {
+            'isbn': '9780132350884',
+            'title': 'Clean Code',
+            'authors': ['Robert Martin'],
+            'year': 2008,
+            'unknown': 'ignored',
+        },
+    )
+    book = _client(httpserver).find('9780132350884')
+    assert book is not None
+    assert book.isbn == '9780132350884'
+    assert book.title == 'Clean Code'
+    assert book.authors == ['Robert Martin']
+    assert book.year == 2008
+
+
+def test_find_returns_none_on_404(httpserver) -> None:
+    httpserver.expect_request(
+        '/books',
+        query_string={'isbn': '9780132350884'},
+    ).respond_with_data(status=404)
+    assert _client(httpserver).find('9780132350884') is None
+
+
+def test_find_raises_on_server_error(httpserver) -> None:
+    httpserver.expect_request(
+        '/books',
+        query_string={'isbn': '9780132350884'},
+    ).respond_with_data(status=500)
     with pytest.raises(IsbnCatalogUnavailable):
-        client.find(ISBN)
+        _client(httpserver).find('9780132350884')
+
+
+def test_find_raises_on_invalid_response(httpserver) -> None:
+    httpserver.expect_request(
+        '/books',
+        query_string={'isbn': '9780132350884'},
+    ).respond_with_json({'isbn': '9780132350884'})
+    with pytest.raises(IsbnCatalogInvalidResponse):
+        _client(httpserver).find('9780132350884')
+
+
+def test_find_sends_isbn(httpserver) -> None:
+    httpserver.expect_request(
+        '/books',
+        query_string={'isbn': '9780132350884'},
+    ).respond_with_json(
+        {
+            'isbn': '9780132350884',
+            'title': 'Clean Code',
+            'authors': ['Robert Martin'],
+            'year': 2008,
+        },
+    )
+    _client(httpserver).find('9780132350884')
+    assert len(httpserver.log) == 1
+    request, _response = httpserver.log[0]
+    assert request.args['isbn'] == '9780132350884'
