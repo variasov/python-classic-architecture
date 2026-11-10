@@ -186,7 +186,7 @@
 - `/library/loan_extensions` — `POST` (ExtendLoan);
 - `/library/returns` — `POST` (ReturnLoanCommand).
 
-Ошибки: `pydantic.ValidationError` → 400, `classic.error_handling.Error` → 422 (один обработчик на всё).
+Ошибки: `pydantic.ValidationError` → 400, `AppError`/`DomainError` → 422 (один обработчик на всё).
 
 ## Хранилище
 
