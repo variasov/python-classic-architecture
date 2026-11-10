@@ -106,7 +106,6 @@ compatibility: opencode
 src/<package>/
   app/
     errors.py                  # AppError - базовый класс ошибок приложения
-    clock.py                   # ABC Clock - источник текущего времени
     commands/
       domain/                  # агрегаты, ABC репозиториев, DomainError и доменные ошибки; не импортирует остальной app
       <system>.py              # ABC внешней системы, общий для нескольких команд
@@ -115,7 +114,6 @@ src/<package>/
     queries/<group>/<query>.py # usecase-запросы, их DTO и ABC гейтвеев
   infra/
     db/                        # см. навык python-classic-adapters-sql-db
-    clock/system.py            # SystemClock - реализация Clock на системных часах
   integrations/
     <system>/                  # клиенты к внешним системам
   interfaces/

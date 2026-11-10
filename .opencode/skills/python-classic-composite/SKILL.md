@@ -37,7 +37,6 @@ compatibility: opencode
     infra/db/repos/<repo>.py
     infra/db/gateways/<gateway>.py
     infra/db/subscribers/<subscriber>.py
-    infra/clock/system.py       # инстанс SystemClock
     integrations/<system>/      # инстансы настроек и клиентов
     interfaces/<entry>/         # точка входа
   ```
@@ -91,17 +90,16 @@ compatibility: opencode
   # composites/app/commands/return_loan.py
   def create_return_loan(
       loans: LoansRepo,
-      clock: Clock,
       engine: Engine,
       logger: logging.Logger,
   ) -> ReturnLoan:
-      return_loan = ReturnLoan(loans=loans, clock=clock, logger=logger)
+      return_loan = ReturnLoan(loans=loans, logger=logger)
       return_loan.run = engine.transaction(return_loan.run)
       return return_loan
 
 
   return_loan = create_return_loan(
-      loans=loans_repo, clock=clock, engine=engine, logger=logger
+      loans=loans_repo, engine=engine, logger=logger
   )
   ```
 - Сборка точки входа конкретного адаптера тоже оформляется фабрикой, её устройство описано в навыке адаптера.

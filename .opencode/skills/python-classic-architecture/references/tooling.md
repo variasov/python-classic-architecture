@@ -10,6 +10,7 @@ dev = [
     "pyright[nodejs]~=1.1.411",
     "ruff~=0.16.4",
     "vulture~=2.16",
+    "freezegun",  # заморозка времени в тестах (date.today/datetime.now)
     # pytest и прочее
 ]
 
