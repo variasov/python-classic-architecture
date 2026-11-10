@@ -106,3 +106,4 @@ Temporary Items
 .ruff_cache/
 mutants/
 .venv-wsl/
+.codegraph
