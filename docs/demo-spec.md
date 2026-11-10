@@ -6,7 +6,7 @@
 - `python-classic-architecture`;
 - `python-classic-adapters-sql-db`;
 - `python-classic-adapters-http-api`;
-- `python-classic-architecture-testing`.
+- `python-classic-mutation-testing`.
 
 Проект служит эталоном. В каждом файле код должен буквально следовать навыкам,
 а не только работать.
@@ -155,7 +155,7 @@
 
 | Группа | Query | Описание |
 |---|---|---|
-| books | `FindBooks` | Фильтры: подстрока названия (не короче 3 символов, иначе пустой результат), автор, `only_available`, год от/до. Сортировка по белому списку колонок, пагинация `limit`/`offset`. Динамический `.sql.tmpl` |
+| books | `FindBooks` | Фильтры: подстрока названия (не короче 3 символов, иначе `ValueError` из `__post_init__` → 400), автор, `only_available`, год от/до. Сортировка по белому списку колонок, пагинация `limit`/`offset`. Динамический `.sql.tmpl` |
 | books | `GetBook` | Карточка книги с экземплярами и их местом на полке. Статический `.sql`. Если книги нет, бросается ошибка запроса → 422 |
 | readers | `FindReaders` | Список читателей с числом активных и просроченных выдач |
 | loans | `FindLoans` | Фильтры: `reader_id`, `only_overdue`, `only_active` |
@@ -167,7 +167,7 @@
 - `app/roles.py`:
   - класс `Permissions` с константами прав;
   - датакласс `Account(login, permissions)`;
-  - доменная ошибка `PermissionDenied`.
+  - ошибка приложения `PermissionDenied` (наследник `AppError`).
 - Usecase принимает `account: Account` явным параметром и проверяет право в начале `run`.
 - HTTP: middleware в `interfaces/api` строит `Account` из заголовка `X-User` по статической таблице
   пользователей из настроек (демо-аутентификация). Результат кладётся в `req.context.account`.
@@ -186,7 +186,7 @@
 - `/library/loan_extensions` — `POST` (ExtendLoan);
 - `/library/returns` — `POST` (ReturnLoanCommand).
 
-Ошибки: `pydantic.ValidationError` → 400, `AppError`/`DomainError` → 422 (один обработчик на всё).
+Ошибки: `pydantic.ValidationError` → 400, `PermissionDenied` → 403, прочие `AppError`/`DomainError` → 422.
 
 ## Хранилище
 
@@ -217,17 +217,20 @@
 
 По навыку тестирования:
 - доменные тесты без БД: инварианты, критерии через `is_satisfied_by`, hypothesis;
-- тесты команд и запросов на тестовой PostgreSQL с миграциями через `classic.migrations`;
-- фабрики данных через usecase;
-- `FakeIsbnCatalog`;
+- unit-тесты команд и запросов с in-memory репозиториями, гейтвеями и `FakeIsbnCatalog` (ABC из app), без БД и сети;
+- тесты репозиториев, гейтвеев и подписчиков на тестовой PostgreSQL с миграциями через `classic.migrations`;
+- e2e-тесты композита на тестовой PostgreSQL со stub-сервером каталога (`pytest-httpserver`);
+- фабрики данных (параметров, агрегатов) — функции с дефолтами и `**overrides` в `conftest.py`;
 - HTTP через `falcon.testing.TestClient`;
-- проверки 400 и 422.
+- проверки 400, 403 и 422.
+
+Мутационное тестирование домена и app по навыку `python-classic-mutation-testing`.
 
 ## Ограничения
 
 - Python ≥ 3.10, пакет `library` в `src/`, namespace-пакеты без `__init__.py`.
 - Зависимости:
   - `falcon`, `waitress`, `pydantic`, `pydantic-settings`, `psycopg[binary]`;
-  - `classic-db-tools`, `classic-migrations`, `classic-criteria`, `classic-signals`, `classic-error-handling`, `classic-scheduler`;
+  - `classic-db-tools`, `classic-migrations`, `classic-criteria`, `classic-signals`, `classic-scheduler`;
   - `urllib3`;
-  - dev: `pytest`, `hypothesis`.
+  - dev: `pytest`, `hypothesis`, `mutmut`.
