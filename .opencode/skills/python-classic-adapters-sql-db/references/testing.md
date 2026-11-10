@@ -4,7 +4,7 @@
 ### Размещение
 ```
 tests/
-  conftest.py                  # test_db_settings, migrated_db, db_engine, raw_db - общие с тестами композита
+  conftest.py                  # db_settings, migrated_db, db_engine, raw_db - общие с тестами композита
   adapters/infra/db/
     conftest.py                # фикстуры репозиториев, гейтвеев, фабрики данных
     test_<repo>.py
@@ -14,13 +14,16 @@ tests/
 
 ### Тестовая БД
 - Никогда не используется боевая БД. Имя тестовой БД задаётся явно.
-- Настройки подключения к тестовой БД читаются отдельным классом (`TestDBSettings`), наследующим общие настройки адаптера и переопределяющим хост, порт, имя БД, пользователя, пароль и имя схемы миграций. Класс объявляется в `infra/db/settings.py` рядом с основным, переменные окружения с префиксом `TEST_`. Тесты композита берут параметры подключения из него же (см. `python-classic-composite`).
-- Для тестовых настроек действует исключение из правил «Настроек» в `python-classic-architecture`: тестовая БД одноразовая и локальная, поэтому `TestDBSettings` может объявлять явные тестовые значения по умолчанию. Боевой `DBSettings` дефолтов подключения не имеет.
+- Настройки подключения - обычный `DBSettings`: значения (хост, порт, имя тестовой БД, пользователь,
+  пароль) приходят из тестового окружения (см. `references/testing.md` навыка
+  `python-classic-architecture`). Тесты композита берут параметры подключения из него же
+  (см. `python-classic-composite`).
+- Схема миграций для тестовой БД - обычная настройка адаптера (`MIGRATIONS_SCHEMA`): то же имя переменной окружения, в тестовом окружении указывает на тестовую схему.
 
 ### Фикстуры
 - Фикстуры БД общие для тестов адаптера и композита, поэтому лежат в корневом `tests/conftest.py`:
   ```
-  test_db_settings
+  db_settings                # обычный DBSettings: значения пришли из тестового окружения
     -> migrated_db          # применяет миграции, teardown дропает схемы
       -> db_engine          # classic.db_tools.Engine поверх тестовой БД
         -> raw_db           # прямые SQL-проверки
@@ -36,7 +39,7 @@ tests/
       db_name=...,
       db_user=...,
       db_pass=...,
-      migration_schema=settings.TEST_MIGRATIONS_SCHEMA,
+      migration_schema=settings.MIGRATIONS_SCHEMA,
   ) as migrator:
       hooks, migrations = collection.to_apply(migrator.history())
       migrator.apply(migrations, hooks)

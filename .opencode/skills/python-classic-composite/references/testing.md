@@ -9,10 +9,14 @@
 
 ### Сборка тестового окружения
 - Настройки читаются при импорте композита, а модуль кэшируется в `sys.modules`. Поэтому:
-  - переменные окружения выставляются до первого импорта композита;
+  - тестовое окружение (`.env.test`) загружается в переменные окружения корневым
+    `tests/conftest.py` до первого импорта композита (см. «Тестовое окружение настроек»
+    в `references/testing.md` навыка `python-classic-architecture`);
   - композит импортируется только внутри session-фикстуры, никогда в начале тестового модуля;
   - на весь прогон действует одна конфигурация. Сценарии различаются ответами stub-сервера и данными, а не настройками.
-- Тесты композита используют те же переменные окружения, что и бой, поэтому фикстура обязана убедиться, что они указывают на тестовую БД. Боевые настройки не имеют дефолтов (см. «Настройки» в `python-classic-architecture`), поэтому без выставленного окружения композит не соберётся вовсе: фикстура `test_env` выставляет все обязательные переменные.
+- Значения БД и остальных настроек уже пришли из тестового окружения. Фикстура `test_env`
+  выставляет только переменные, значения которых известны в момент запуска тестов - адреса
+  stub-серверов: без них композит не соберётся, у боевых настроек нет дефолтов.
   ```python
   # tests/composites/conftest.py
   @pytest.fixture(scope='session')
@@ -24,11 +28,8 @@
 
 
   @pytest.fixture(scope='session')
-  def test_env(test_db_settings, migrated_db, catalog_server) -> Iterator[None]:
+  def test_env(migrated_db, catalog_server) -> Iterator[None]:
       with pytest.MonkeyPatch.context() as env:
-          env.setenv('DB_HOST', test_db_settings.TEST_DB_HOST)
-          env.setenv('DB_NAME', test_db_settings.TEST_DB_NAME)
-          ...
           env.setenv('CATALOG_URL', catalog_server.url_for('/'))
           yield
 
