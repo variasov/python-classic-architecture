@@ -131,7 +131,7 @@
 
 - `LoanIssued` обрабатывает подписчик в infra. Он пишет строку в таблицу `notifications` (outbox).
 - `OverdueReminderRequested(on: date)` испускает планировщик.
-- Подписчик в infra на этот сигнал запускает команду `RemindOverdueLoans`:
+- Подписчик в `interfaces/signals/` на этот сигнал запускает команду `RemindOverdueLoans`:
   - находит выдачи по критерию `overdue(on)`;
   - на каждую кладёт уведомление в outbox.
 
