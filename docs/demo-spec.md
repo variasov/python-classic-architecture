@@ -130,8 +130,7 @@
 ### Сигналы и уведомления
 
 - `LoanIssued` обрабатывает подписчик в infra. Он пишет строку в таблицу `notifications` (outbox).
-- `OverdueReminderRequested(on: date)` испускает планировщик.
-- Подписчик в `interfaces/signals/` на этот сигнал запускает команду `RemindOverdueLoans`:
+- Планировщик напрямую запускает команду `RemindOverdueLoans` (инстанс собран в композите):
   - находит выдачи по критерию `overdue(on)`;
   - на каждую кладёт уведомление в outbox.
 
@@ -207,7 +206,7 @@
 ## Процессы (точки входа в `composites/interfaces/`)
 
 - `api` — `python -m library.composites.interfaces.api`.
-- `overdue_scheduler` — `classic-scheduler` по cron испускает `OverdueReminderRequested(on=today)`.
+- `overdue_scheduler` — `classic-scheduler` по cron напрямую вызывает команду `RemindOverdueLoans` (инстанс из композита) с `on=today`.
 
 ## Окружение для разработки и тестов
 
