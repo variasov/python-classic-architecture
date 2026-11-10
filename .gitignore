@@ -107,3 +107,4 @@ Temporary Items
 mutants/
 .venv-wsl/
 .codegraph
+.jcode
