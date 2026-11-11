@@ -193,3 +193,27 @@
   границы `days` 0/1/30/31, состояние репозитория), HTTP (200/400/403/422), e2e выдача -> продление ->
   возврат с проверкой `copies.is_available`, повторный возврат -> 422. Даты - от реального `date.today()`.
 - Состояние: `pytest 402 passed`, `pyright 0 errors`. ruff/vulture не запускались (их нет в `.venv-wsl`).
+
+### 09. Уведомление о выдаче (выполнено)
+- Домен `domain/notification.py`: `NotificationKind(Enum)` (`loan_issued`/`loan_overdue`), `Notification`
+  (`reader_id`, `loan_id`, `kind`, `created_at`, `id` последним), критерии `about_loan`/`of_kind`,
+  `NotificationsRepo` (`get_by_id`/`save`/`find`), `NotificationNotFound`. `check()` пустой: инвариантов
+  у уведомления спецификация не задаёт, но репозиторий вызывает его как последний рубеж.
+- Домен `domain/notify_on_loan_issued.py`: `NotifyOnLoanIssued(hub, notifications, logger)` подписывается
+  на `LoanIssued` в конструкторе; обработчик сохраняет `Notification(kind=loan_issued, created_at=date.today())`.
+  `hub` - первый аргумент, как требует задача.
+- БД: `0002.add_notifications.sql` (`-- transactional: true`, `-- depends: 0001.init`) и `DDL.sql`
+  создают `library.notifications` с каскадными FK на `readers`/`loans` и индексом `(loan_id, kind)`;
+  `aggregates/notifications/{get_by_id,insert,update,find,criteria}`; `DbNotificationsRepo`.
+  `kind` в БД - text: `NotificationKind.value` при записи, обратное преобразование - фабрика `_notification`
+  в `Entity(_notification, 'id')` (стандартный маппинг не умеет Enum).
+- Композит: `composites/infra/db/repos/notifications.py`, `composites/app/notify_on_loan_issued.py`
+  (инстанс на общем `hub`), `wsgi.py` импортирует реакцию явным re-export до сборки `app`.
+- Тесты: критерии домена в обеих формах и комбинациях; реакция со своим `Hub` и in-memory репозиторием
+  (подписка в конструкторе, поля и `created_at=date.today()`); контракт DB+in-memory, roundtrip Enum,
+  обновление, `NotificationNotFound`, каждый SQL-макрос сверен с `is_satisfied_by`; e2e `POST /library/loans`
+  создаёт строку `loan_issued`; при падении `DbNotificationsRepo.save` - 500, выдачи нет,
+  `copies.is_available=true`; тест композита проверяет регистрацию реакции.
+- ОТКЛОНЕНИЕ: `freezegun` в `.venv-wsl` нет, поэтому в тестах реакции/e2e используется реальный
+  `date.today()`, как в задачах 07-08.
+- Состояние: `pytest 436 passed`, `pyright 0 errors`. ruff/vulture не запускались (их нет в `.venv-wsl`).

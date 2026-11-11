@@ -482,6 +482,159 @@ def test_issue_loan_marks_copy_unavailable(
             )
 
 
+def _create_loan_entities(
+    client: testing.TestClient,
+    isbn: str,
+    inventory_number: str,
+    email: str,
+) -> tuple[int, int, int]:
+    book = client.simulate_post(
+        '/library/books', headers={'X-User': 'admin'}, json={**BOOK, 'isbn': isbn}
+    )
+    assert book.status_code == 201
+    book_id: int = book.json['id']
+
+    copy = client.simulate_post(
+        '/library/copies',
+        headers={'X-User': 'admin'},
+        json={
+            **COPY,
+            'book_id': book_id,
+            'inventory_number': inventory_number,
+        },
+    )
+    assert copy.status_code == 201
+    copy_id: int = copy.json['id']
+
+    reader = client.simulate_post(
+        '/library/readers',
+        headers={'X-User': 'admin'},
+        json={**READER, 'email': email, 'valid_until': '2030-12-31'},
+    )
+    assert reader.status_code == 201
+    reader_id: int = reader.json['id']
+    return book_id, copy_id, reader_id
+
+
+def test_issue_loan_creates_notification(
+    client: testing.TestClient, raw_db: Any
+) -> None:
+    isbn = '9785171183669'
+    email = 'reader-notification-e2e@example.com'
+    _delete_book(raw_db, isbn)
+    _delete_reader(raw_db, email)
+    book_id: int | None = None
+    reader_id: int | None = None
+    try:
+        book_id, copy_id, reader_id = _create_loan_entities(
+            client,
+            isbn,
+            'INV-E2E-NOTIFY-1',
+            email,
+        )
+
+        issued = client.simulate_post(
+            '/library/loans',
+            headers={'X-User': 'admin'},
+            json={'reader_id': reader_id, 'copy_id': copy_id},
+        )
+
+        assert issued.status_code == 201
+        loan_id: int = issued.json['id']
+        notification = raw_db.scalar(
+            'SELECT kind FROM library.notifications '
+            'WHERE loan_id = %(loan_id)s',
+            loan_id=loan_id,
+        )
+        assert notification == 'loan_issued'
+        assert raw_db.scalar(
+            'SELECT reader_id FROM library.notifications '
+            'WHERE loan_id = %(loan_id)s',
+            loan_id=loan_id,
+        ) == reader_id
+        assert str(
+            raw_db.scalar(
+                'SELECT created_at FROM library.notifications '
+                'WHERE loan_id = %(loan_id)s',
+                loan_id=loan_id,
+            )
+        ) == str(date.today())
+    finally:
+        if reader_id is not None:
+            raw_db.execute(
+                'DELETE FROM library.readers WHERE id = %(id)s', id=reader_id
+            )
+        if book_id is not None:
+            raw_db.execute(
+                'DELETE FROM library.books WHERE id = %(id)s', id=book_id
+            )
+
+
+def test_loan_rolls_back_when_notification_fails(
+    client: testing.TestClient,
+    raw_db: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from library.infra.db.repos.notifications import DbNotificationsRepo
+
+    def fail(self: DbNotificationsRepo, notification: object) -> None:
+        raise RuntimeError('сбой сохранения уведомления')
+
+    isbn = '9785171183670'
+    email = 'reader-notification-rollback@example.com'
+    _delete_book(raw_db, isbn)
+    _delete_reader(raw_db, email)
+    book_id: int | None = None
+    reader_id: int | None = None
+    try:
+        book_id, copy_id, reader_id = _create_loan_entities(
+            client,
+            isbn,
+            'INV-E2E-NOTIFY-2',
+            email,
+        )
+        monkeypatch.setattr(DbNotificationsRepo, 'save', fail)
+
+        issued = client.simulate_post(
+            '/library/loans',
+            headers={'X-User': 'admin'},
+            json={'reader_id': reader_id, 'copy_id': copy_id},
+        )
+
+        assert issued.status_code == 500
+        assert (
+            raw_db.scalar(
+                'SELECT count(*) FROM library.loans WHERE reader_id = %(id)s',
+                id=reader_id,
+            )
+            == 0
+        )
+        assert (
+            raw_db.scalar(
+                'SELECT is_available FROM library.copies WHERE id = %(id)s',
+                id=copy_id,
+            )
+            is True
+        )
+        assert (
+            raw_db.scalar(
+                'SELECT count(*) FROM library.notifications '
+                'WHERE reader_id = %(id)s',
+                id=reader_id,
+            )
+            == 0
+        )
+    finally:
+        if reader_id is not None:
+            raw_db.execute(
+                'DELETE FROM library.readers WHERE id = %(id)s', id=reader_id
+            )
+        if book_id is not None:
+            raw_db.execute(
+                'DELETE FROM library.books WHERE id = %(id)s', id=book_id
+            )
+
+
 def test_extend_and_return_loan_flow(
     client: testing.TestClient, raw_db: Any
 ) -> None:

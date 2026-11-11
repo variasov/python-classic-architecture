@@ -1,0 +1,9 @@
+{# Критерии Notification. Таблица notifications - алиас n #}
+
+{% macro about_loan(criteria) -%}
+    n.loan_id = {{ criteria.loan_id }}
+{%- endmacro %}
+
+{% macro of_kind(criteria) -%}
+    n.kind = {{ criteria.kind.value }}
+{%- endmacro %}

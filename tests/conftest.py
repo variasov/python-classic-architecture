@@ -27,6 +27,12 @@ from library.app.commands.domain.loan import (
     LoanPeriod,
     LoansRepo,
 )
+from library.app.commands.domain.notification import (
+    Notification,
+    NotificationKind,
+    NotificationNotFound,
+    NotificationsRepo,
+)
 from library.app.commands.domain.reader import (
     Contact,
     Membership,
@@ -320,3 +326,52 @@ def loan_factory() -> Callable[..., Loan]:
 @pytest.fixture
 def in_memory_loans_repo() -> InMemoryLoansRepo:
     return InMemoryLoansRepo()
+
+
+class InMemoryNotificationsRepo(NotificationsRepo):
+    """In-memory реализация репозитория уведомлений"""
+
+    def __init__(self) -> None:
+        self._notifications: dict[int, Notification] = {}
+        self._next_id = 1
+
+    def get_by_id(self, id: int) -> Notification:
+        if id not in self._notifications:
+            raise NotificationNotFound(id=id)
+        return deepcopy(self._notifications[id])
+
+    def save(self, notification: Notification) -> Notification:
+        notification.check()
+        if notification.id is None:
+            notification.id = self._next_id
+            self._next_id += 1
+        self._notifications[notification.id] = deepcopy(notification)
+        return notification
+
+    def find(self, criteria: Criteria[Notification]) -> list[Notification]:
+        return [
+            deepcopy(notification)
+            for notification in self._notifications.values()
+            if criteria.is_satisfied_by(notification)
+        ]
+
+
+def make_notification(**overrides: Any) -> Notification:
+    fields: dict[str, Any] = {
+        'reader_id': 1,
+        'loan_id': 1,
+        'kind': NotificationKind.loan_issued,
+        'created_at': TODAY,
+    }
+    fields.update(overrides)
+    return Notification(**fields)
+
+
+@pytest.fixture
+def notification_factory() -> Callable[..., Notification]:
+    return make_notification
+
+
+@pytest.fixture
+def in_memory_notifications_repo() -> InMemoryNotificationsRepo:
+    return InMemoryNotificationsRepo()
