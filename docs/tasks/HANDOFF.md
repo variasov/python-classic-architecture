@@ -241,16 +241,21 @@
   на query; e2e - после выдачи и возврата списки читателей и выдач отражают состояние.
 - Состояние: `pytest 494 passed`, `pyright 0 errors`. ruff/vulture не запускались (их нет в `.venv-wsl`).
 
-### 10. Напоминания о просрочке (НЕ выполнено)
-- Задача НЕ реализована: исчерпан бюджет времени эксперимента (~2 часа на 12 задач).
-- Не сделано: команда `RemindOverdueLoans` (поиск `Loan.overdue(on=date.today())`, дедупликация по
-  `Notification.about_loan(...) & Notification.of_kind(loan_overdue)`, возврат числа новых),
-  уведомления `loan_overdue`, точка входа `composites/interfaces/overdue_scheduler/`
-  (cron `0 9 * * *`), e2e-проверки задачи.
-- Что уже готово и переиспользуется: `Notification`/`NotificationKind`/`NotificationsRepo`,
-  миграция `0002.add_notifications`, `Hub`, установленный `classic-scheduler`; паттерн сборки
-  команд с `engine.transaction` и точки входа - по образцу `interfaces/api`.
-- Критерии приёмки задачи 10 не покрыты; зелёные 494 теста относятся к задачам 00-09 и 11.
-- Эксплуатационное замечание: два pytest-прогона одновременно против одной тестовой БД ломают друг
-  друга (сессионная `migrated_db` дропает схемы `library`/`library_migrations`); запускать прогоны
-  строго последовательно.
+### 10. Напоминания о просрочке (выполнено)
+- App: `commands/use_cases/loans/remind_overdue_loans.py` - `RemindOverdueLoans(loans, notifications, logger)`,
+  `run()` без `account`. `on = date.today()`, `loans.find(Loan.overdue(on=on))`; если у выдачи нет уведомления
+  `about_loan & of_kind(loan_overdue)`, сохраняет `Notification(..., kind=loan_overdue, created_at=on)`.
+  Возвращает число новых; повторный запуск - 0. Своих ошибок команда не объявляет.
+- Композит: `composites/app/commands/remind_overdue_loans.py` - инстанс с `engine.transaction` на `run`
+  (задача планировщика - самостоятельный вход в БД; прав у фоновой команды нет).
+- Точка входа `composites/interfaces/overdue_scheduler/`: `scheduler.py` с `CRON_SCHEDULE = '0 9 * * *'`,
+  `add_overdue_reminder(scheduler)` и `build_scheduler(scheduler)`; `__main__.py` только запускает
+  `build_scheduler(Scheduler()).run()`, поэтому импорт сборки безопасен.
+- Тесты: unit - просроченная/активная/возвращённая выдачи, дедупликация, `loan_issued` не мешает
+  `loan_overdue`, счётчик; e2e - выдача через API, `UPDATE ... period_due = current_date - 1`, вызов
+  инстанса композита, `loan_overdue` в `raw_db`, повтор - 0 и одна строка.
+- Время без freezegun: даты unit-тестов заданы фабрикой от реального `date.today()`
+  (`LoanPeriod(start=today - 14, due=today - 1)`), e2e просрочивает выдачу SQL от `current_date`.
+- Сборка проверена без запуска: fake `by_cron` фиксирует `'0 9 * * *'` и `remind_overdue_loans.run`;
+  тест достаёт `CronTask` из `Scheduler._inbox` и сверяет `expressions` с `['0','9','*','*','*']`.
+- Состояние: `pytest 502 passed`, `pyright 0 errors`, `ruff check src tests` - 0 ошибок.
