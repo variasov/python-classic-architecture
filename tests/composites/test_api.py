@@ -398,3 +398,82 @@ def test_membership_and_blocking_flow(
         assert repeated_unblock.json[0]['type'] == 'ReaderNotBlocked'
     finally:
         _delete_reader(raw_db, email)
+
+
+def test_issue_loan_marks_copy_unavailable(
+    client: testing.TestClient, raw_db: Any
+) -> None:
+    isbn = '9785171183667'
+    inventory_number = 'INV-E2E-LOAN-1'
+    email = 'reader-loan-e2e@example.com'
+    _delete_book(raw_db, isbn)
+    _delete_reader(raw_db, email)
+    book_id: int | None = None
+    reader_id: int | None = None
+    try:
+        book = client.simulate_post(
+            '/library/books', headers={'X-User': 'admin'}, json={**BOOK, 'isbn': isbn}
+        )
+        assert book.status_code == 201
+        book_id = book.json['id']
+
+        copy = client.simulate_post(
+            '/library/copies',
+            headers={'X-User': 'admin'},
+            json={
+                **COPY,
+                'book_id': book_id,
+                'inventory_number': inventory_number,
+            },
+        )
+        assert copy.status_code == 201
+        copy_id = copy.json['id']
+
+        reader = client.simulate_post(
+            '/library/readers',
+            headers={'X-User': 'admin'},
+            json={**READER, 'email': email, 'valid_until': '2030-12-31'},
+        )
+        assert reader.status_code == 201
+        reader_id = reader.json['id']
+
+        issued = client.simulate_post(
+            '/library/loans',
+            headers={'X-User': 'admin'},
+            json={'reader_id': reader_id, 'copy_id': copy_id},
+        )
+
+        assert issued.status_code == 201
+        loan_id = issued.json['id']
+        assert (
+            raw_db.scalar(
+                'SELECT is_available FROM library.copies WHERE id = %(id)s',
+                id=copy_id,
+            )
+            is False
+        )
+        assert (
+            raw_db.scalar(
+                'SELECT count(*) FROM library.loans WHERE id = %(id)s',
+                id=loan_id,
+            )
+            == 1
+        )
+
+        repeated = client.simulate_post(
+            '/library/loans',
+            headers={'X-User': 'admin'},
+            json={'reader_id': reader_id, 'copy_id': copy_id},
+        )
+
+        assert repeated.status_code == 422
+        assert repeated.json[0]['type'] == 'CopyNotAvailable'
+    finally:
+        if reader_id is not None:
+            raw_db.execute(
+                'DELETE FROM library.readers WHERE id = %(id)s', id=reader_id
+            )
+        if book_id is not None:
+            raw_db.execute(
+                'DELETE FROM library.books WHERE id = %(id)s', id=book_id
+            )

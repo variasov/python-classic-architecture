@@ -1,0 +1,19 @@
+{# Критерии Loan. Таблица loans - алиас l #}
+
+{% macro overdue(criteria) -%}
+    l.returned_at IS NULL AND l.period_due < {{ criteria.on }}
+{%- endmacro %}
+
+{% macro returned(criteria) -%}
+    l.returned_at IS NOT NULL
+{%- endmacro %}
+
+{% macro due_within(criteria) -%}
+    l.returned_at IS NULL
+    AND l.period_due >= {{ criteria.on }}
+    AND l.period_due <= {{ criteria.on }} + {{ criteria.days }}
+{%- endmacro %}
+
+{% macro of_reader(criteria) -%}
+    l.reader_id = {{ criteria.reader_id }}
+{%- endmacro %}

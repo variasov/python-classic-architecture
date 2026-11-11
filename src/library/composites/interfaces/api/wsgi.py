@@ -6,6 +6,7 @@ from library.composites.interfaces.api.resources.book import book
 from library.composites.interfaces.api.resources.books import books
 from library.composites.interfaces.api.resources.catalog_books import catalog_books
 from library.composites.interfaces.api.resources.copies import copies
+from library.composites.interfaces.api.resources.loans import loans
 from library.composites.interfaces.api.resources.memberships import memberships
 from library.composites.interfaces.api.resources.reader_blocks import reader_blocks
 from library.composites.interfaces.api.resources.readers import readers
@@ -21,4 +22,5 @@ app: falcon.App[Any, Any] = create_app(
     catalog_books=catalog_books,
     memberships=memberships,
     reader_blocks=reader_blocks,
+    loans=loans,
 )

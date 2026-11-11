@@ -17,6 +17,7 @@ from library.interfaces.api.resources.book import BookResource
 from library.interfaces.api.resources.books import BooksResource
 from library.interfaces.api.resources.catalog_books import CatalogBooksResource
 from library.interfaces.api.resources.copies import CopiesResource
+from library.interfaces.api.resources.loans import LoansResource
 from library.interfaces.api.resources.memberships import MembershipsResource
 from library.interfaces.api.resources.reader_blocks import ReaderBlocksResource
 from library.interfaces.api.resources.readers import ReadersResource
@@ -139,6 +140,11 @@ def unblock_reader_fake() -> Any:
 
 
 @pytest.fixture
+def issue_loan_fake() -> Any:
+    return FakeUseCase(result=5)
+
+
+@pytest.fixture
 def find_books_fake() -> Any:
     return FakeQuery(
         result=[
@@ -189,6 +195,7 @@ def client(
     extend_membership_fake: Any,
     block_reader_fake: Any,
     unblock_reader_fake: Any,
+    issue_loan_fake: Any,
 ) -> testing.TestClient:
     app = create_app(
         api_settings,
@@ -207,6 +214,7 @@ def client(
         reader_blocks=ReaderBlocksResource(
             block_reader=block_reader_fake, unblock_reader=unblock_reader_fake
         ),
+        loans=LoansResource(issue_loan=issue_loan_fake),
     )
     app.add_route('/probe', ProbeResource())
     return testing.TestClient(app)

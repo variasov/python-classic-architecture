@@ -1,7 +1,7 @@
 import os
 from collections.abc import Callable, Iterator
 from copy import deepcopy
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, cast
 
@@ -20,6 +20,12 @@ from library.app.commands.domain.copy import (
     CopyNotFound,
     CopiesRepo,
     ShelfLocation,
+)
+from library.app.commands.domain.loan import (
+    Loan,
+    LoanNotFound,
+    LoanPeriod,
+    LoansRepo,
 )
 from library.app.commands.domain.reader import (
     Contact,
@@ -264,3 +270,53 @@ def reader_factory() -> Callable[..., Reader]:
 @pytest.fixture
 def in_memory_readers_repo() -> InMemoryReadersRepo:
     return InMemoryReadersRepo()
+
+
+class InMemoryLoansRepo(LoansRepo):
+    """In-memory реализация репозитория выдач"""
+
+    def __init__(self) -> None:
+        self._loans: dict[int, Loan] = {}
+        self._next_id = 1
+
+    def get_by_id(self, id: int) -> Loan:
+        if id not in self._loans:
+            raise LoanNotFound(id=id)
+        return deepcopy(self._loans[id])
+
+    def save(self, loan: Loan) -> Loan:
+        loan.check()
+        if loan.id is None:
+            loan.id = self._next_id
+            self._next_id += 1
+        self._loans[loan.id] = deepcopy(loan)
+        return loan
+
+    def find(self, criteria: Criteria[Loan]) -> list[Loan]:
+        return [
+            deepcopy(loan)
+            for loan in self._loans.values()
+            if criteria.is_satisfied_by(loan)
+        ]
+
+
+def make_loan(**overrides: Any) -> Loan:
+    fields: dict[str, Any] = {
+        'reader_id': 1,
+        'copy_id': 1,
+        'period': LoanPeriod(
+            start=TODAY, due=TODAY + timedelta(days=Loan.TERM_DAYS)
+        ),
+    }
+    fields.update(overrides)
+    return Loan(**fields)
+
+
+@pytest.fixture
+def loan_factory() -> Callable[..., Loan]:
+    return make_loan
+
+
+@pytest.fixture
+def in_memory_loans_repo() -> InMemoryLoansRepo:
+    return InMemoryLoansRepo()

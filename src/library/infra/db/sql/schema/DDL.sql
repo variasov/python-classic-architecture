@@ -36,3 +36,20 @@ CREATE TABLE library.readers (
     valid_until date NOT NULL,
     is_blocked boolean NOT NULL DEFAULT FALSE
 );
+
+CREATE TABLE library.loans (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    reader_id integer NOT NULL REFERENCES library.readers (id) ON DELETE CASCADE,
+    copy_id integer NOT NULL REFERENCES library.copies (id) ON DELETE CASCADE,
+    period_start date NOT NULL,
+    period_due date NOT NULL,
+    returned_at date
+);
+
+CREATE TABLE library.loan_extensions (
+    loan_id integer NOT NULL REFERENCES library.loans (id) ON DELETE CASCADE,
+    position integer NOT NULL,
+    extended_at date NOT NULL,
+    new_due date NOT NULL,
+    PRIMARY KEY (loan_id, position)
+);
