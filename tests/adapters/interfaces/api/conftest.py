@@ -9,8 +9,11 @@ from pydantic import TypeAdapter
 
 from library.app.commands.domain.errors import DomainError
 from library.app.errors import AppError
+from library.app.queries.books.find_books import BookListItemDTO
+from library.app.queries.books.get_book import BookCardDTO, BookCopyDTO
 from library.app.roles import PermissionDenied
 from library.composites.interfaces.api.wsgi import create_app
+from library.interfaces.api.resources.book import BookResource
 from library.interfaces.api.resources.books import BooksResource
 from library.interfaces.api.resources.copies import CopiesResource
 from library.interfaces.api.settings import ApiSettings
@@ -74,6 +77,23 @@ class FakeUseCase:
         return self.result
 
 
+class FakeQuery:
+    """Заглушка запроса: запоминает параметры, возвращает заданный результат"""
+
+    def __init__(
+        self, result: Any = None, error: Exception | None = None
+    ) -> None:
+        self.result = result
+        self.error = error
+        self.calls: list[Any] = []
+
+    def run(self, params: Any) -> Any:
+        self.calls.append(params)
+        if self.error is not None:
+            raise self.error
+        return self.result
+
+
 @pytest.fixture
 def api_settings() -> ApiSettings:
     return ApiSettings(API_HOST='127.0.0.1', API_PORT=8080)
@@ -90,15 +110,59 @@ def create_copies_fake() -> Any:
 
 
 @pytest.fixture
+def find_books_fake() -> Any:
+    return FakeQuery(
+        result=[
+            BookListItemDTO(
+                id=1,
+                isbn='9785171183660',
+                title='Война и мир',
+                authors=['Лев Толстой'],
+                published_year=1869,
+                available_copies=2,
+            )
+        ]
+    )
+
+
+@pytest.fixture
+def get_book_fake() -> Any:
+    return FakeQuery(
+        result=BookCardDTO(
+            id=1,
+            isbn='9785171183660',
+            title='Война и мир',
+            authors=['Лев Толстой'],
+            published_year=1869,
+            copies=[
+                BookCopyDTO(
+                    id=5,
+                    inventory_number='INV-001',
+                    hall='Читальный зал',
+                    rack=2,
+                    shelf=3,
+                    is_available=True,
+                )
+            ],
+        )
+    )
+
+
+@pytest.fixture
 def client(
     api_settings: ApiSettings,
     create_book_fake: Any,
     create_copies_fake: Any,
+    find_books_fake: Any,
+    get_book_fake: Any,
 ) -> testing.TestClient:
     app = create_app(
         api_settings,
-        books=BooksResource(create_book=create_book_fake),
+        books=BooksResource(
+            create_book=create_book_fake, find_books=find_books_fake
+        ),
         copies=CopiesResource(add_copy=create_copies_fake),
+        book=BookResource(get_book=get_book_fake),
     )
     app.add_route('/probe', ProbeResource())
     return testing.TestClient(app)

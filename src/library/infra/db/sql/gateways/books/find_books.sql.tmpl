@@ -1,0 +1,47 @@
+{# Поиск книг. Сортировка подставляется из белого списка гейтвея #}
+SELECT
+    b.id AS BookListItemDTO__id,
+    b.isbn AS BookListItemDTO__isbn,
+    b.title AS BookListItemDTO__title,
+    b.published_year AS BookListItemDTO__published_year,
+    COALESCE(
+        (
+            SELECT array_agg(a.name ORDER BY a.position)
+            FROM library.book_authors a
+            WHERE a.book_id = b.id
+        ),
+        ARRAY[]::text[]
+    ) AS BookListItemDTO__authors,
+    (
+        SELECT count(*)
+        FROM library.copies c
+        WHERE c.book_id = b.id AND c.is_available = TRUE
+    ) AS BookListItemDTO__available_copies
+FROM library.books b
+WHERE TRUE
+{% if title_contains %}
+    AND b.title ILIKE '%%' || {{ title_contains }} || '%%'
+{% endif %}
+{% if author %}
+    AND EXISTS (
+        SELECT 1
+        FROM library.book_authors ba
+        WHERE ba.book_id = b.id AND ba.name = {{ author }}
+    )
+{% endif %}
+{% if only_available %}
+    AND EXISTS (
+        SELECT 1
+        FROM library.copies ac
+        WHERE ac.book_id = b.id AND ac.is_available = TRUE
+    )
+{% endif %}
+{% if year_from is not none %}
+    AND b.published_year >= {{ year_from }}
+{% endif %}
+{% if year_to is not none %}
+    AND b.published_year <= {{ year_to }}
+{% endif %}
+ORDER BY {{ column | identifier }}, b.id
+LIMIT {{ limit }}
+OFFSET {{ offset }}

@@ -128,5 +128,57 @@ def test_duplicate_inventory_number_is_422(
         _delete_book(raw_db, isbn)
 
 
+def test_book_card_and_search_return_copies(
+    client: testing.TestClient, raw_db: Any
+) -> None:
+    isbn = '9785171183664'
+    try:
+        book_id = _create_book(client, raw_db, isbn)
+        for inventory_number, rack in (
+            ('INV-E2E-11', 1),
+            ('INV-E2E-12', 2),
+        ):
+            response = client.simulate_post(
+                '/library/copies',
+                headers={'X-User': 'admin'},
+                json={
+                    **COPY,
+                    'book_id': book_id,
+                    'inventory_number': inventory_number,
+                    'rack': rack,
+                },
+            )
+            assert response.status_code == 201
+
+        card = client.simulate_get(
+            '/library/book', params={'id': str(book_id)}
+        )
+
+        assert card.status_code == 200
+        assert card.json['id'] == book_id
+        assert card.json['title'] == BOOK['title']
+        assert card.json['authors'] == BOOK['authors']
+        assert [
+            copy['inventory_number'] for copy in card.json['copies']
+        ] == ['INV-E2E-11', 'INV-E2E-12']
+        assert card.json['copies'][0]['hall'] == COPY['hall']
+        assert card.json['copies'][0]['rack'] == 1
+        assert card.json['copies'][0]['shelf'] == COPY['shelf']
+        assert card.json['copies'][0]['is_available'] is True
+
+        found = client.simulate_get(
+            '/library/books', params={'title__contains': 'Война'}
+        )
+
+        assert found.status_code == 200
+        item = next(
+            book for book in found.json if book['id'] == book_id
+        )
+        assert item['title'] == BOOK['title']
+        assert item['available_copies'] == 2
+    finally:
+        _delete_book(raw_db, isbn)
+
+
 def test_unknown_route_is_404(client: testing.TestClient) -> None:
     assert client.simulate_get('/library/nothing').status_code == 404

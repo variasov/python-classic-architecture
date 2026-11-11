@@ -54,3 +54,26 @@
   `tests/conftest.py` дополнен `InMemoryCopiesRepo` и `copy_factory`.
 - Состояние: `pytest 93 passed`, `pyright 0 errors`. ruff/vulture не запускались: их нет в `.venv-wsl`,
   установка запрещена. Отклонений от спецификации нет.
+
+### 03. Карточка и поиск книг (выполнено)
+- App: `app/queries/books/get_book.py` (`GetBookParams`, `BookCopyDTO`/`BookCardDTO`, `GetBookNotFound`,
+  `GetBookGateway`, `GetBook`), `find_books.py` (`FindBooksParams` с `ClassVar`-границами и проверками
+  в `__post_init__`, `BookListItemDTO`, `FindBooksGateway`, `FindBooks`). Запросы не импортируют
+  `app/commands`, DTO свои.
+- БД: `infra/db/gateways/get_book.py` и `find_books.py` (два файла по правилу «класс=файл»);
+  `sql/gateways/books/get_book.sql` - статический запрос с `LEFT JOIN copies` и подзапросом авторов,
+  карточка маппится `Entity` + `Append('copy')`; `find_books.sql.tmpl` - динамический, `{% if %}` на
+  каждый фильтр, сортировка из белого списка `SORT_COLUMNS` через `identifier`, `LIMIT/OFFSET`
+  биндятся. Дополнительно в списке отдаётся `available_copies` (число доступных экземпляров).
+- `GetBookGateway.run` возвращает `BookCardDTO | None`, `GetBookNotFound` бросает usecase-запрос:
+  так ошибка запроса остаётся в app, а гейтвей только читает.
+- HTTP: `BooksResource.on_get` (`GET /library/books`), `BookResource.on_get` (`GET /library/book?id=`),
+  `create_app` принимает `book` четвёртым ресурсом; тестовый `conftest` обновлён. Запросы в композите
+  без транзакции (автокоммит); инстансы в `composites/app/queries/books`, `composites/infra/db/gateways`,
+  `composites/interfaces/api/resources/book.py`.
+- Тесты: unit запросов с fake-гейтвеями и все границы `FindBooksParams`; гейтвеи на тестовой БД
+  (каждый фильтр, комбинации, оба `order_by`, пагинация, пустой результат, карточка с местом на полке);
+  HTTP 200/400/422; e2e книга + 2 экземпляра -> карточка и поиск.
+- Состояние: `pytest 148 passed`, `pyright 0 errors`. ruff/vulture не запускались: их нет в `.venv-wsl`,
+  установка запрещена. Отклонения: гейтвеи разложены в два файла (не `books.py`) по правилу
+  «класс=файл»; `BookListItemDTO` содержит `available_copies`.
