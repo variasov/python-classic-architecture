@@ -27,7 +27,8 @@ def notifications_repo(
 
 @pytest.fixture
 def reaction(
-    hub: Hub, notifications_repo: NotificationsRepo
+    hub: Hub,
+    notifications_repo: NotificationsRepo,
 ) -> NotifyOnLoanIssued:
     return NotifyOnLoanIssued(
         hub=hub,

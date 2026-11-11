@@ -11,7 +11,7 @@ from library.app.commands.domain.borrow_copy import (
     LoanLimitReached,
     ReaderCannotBorrow,
 )
-from library.app.commands.domain.copy import Copy, CopiesRepo
+from library.app.commands.domain.copy import CopiesRepo, Copy
 from library.app.commands.domain.events import LoanIssued
 from library.app.commands.domain.loan import Loan, LoanPeriod, LoansRepo
 from library.app.commands.domain.reader import (
@@ -100,8 +100,8 @@ def issue_loan_params() -> Callable[..., IssueLoanParams]:
 def reader(readers_repo: ReadersRepo, reader_factory: Callable[..., Reader]) -> Reader:
     return readers_repo.save(
         reader_factory(
-            membership=Membership(tier='basic', valid_until=FUTURE)
-        )
+            membership=Membership(tier='basic', valid_until=FUTURE),
+        ),
     )
 
 
@@ -133,7 +133,8 @@ def test_issues_loan_for_today(
     assert loan.reader_id == reader.id
     assert loan.copy_id == copy.id
     assert loan.period == LoanPeriod(
-        start=TODAY, due=TODAY + timedelta(days=Loan.TERM_DAYS)
+        start=TODAY,
+        due=TODAY + timedelta(days=Loan.TERM_DAYS),
     )
     assert copies_repo.get_by_id(_id(copy)).is_available is False
 
@@ -152,7 +153,7 @@ def test_emits_loan_issued(
     )
 
     assert received == [
-        LoanIssued(loan_id=loan_id, reader_id=_id(reader))
+        LoanIssued(loan_id=loan_id, reader_id=_id(reader)),
     ]
 
 
@@ -187,7 +188,7 @@ def test_blocked_reader_is_rejected(
         reader_factory(
             membership=Membership(tier='basic', valid_until=FUTURE),
             is_blocked=True,
-        )
+        ),
     )
 
     with pytest.raises(ReaderCannotBorrow):
@@ -215,7 +216,7 @@ def test_loan_limit_is_enforced(
                     start=TODAY - timedelta(days=30),
                     due=TODAY + timedelta(days=7),
                 ),
-            )
+            ),
         )
 
     with pytest.raises(LoanLimitReached):

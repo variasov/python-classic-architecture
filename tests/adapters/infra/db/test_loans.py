@@ -52,13 +52,15 @@ def loans_env(
         assert book.id is not None
         copy = copies.save(
             copy_factory(
-                book_id=book.id, inventory_number=f'INV-{uuid4().hex}'
-            )
+                book_id=book.id,
+                inventory_number=f'INV-{uuid4().hex}',
+            ),
         )
         other_copy = copies.save(
             copy_factory(
-                book_id=book.id, inventory_number=f'INV-{uuid4().hex}'
-            )
+                book_id=book.id,
+                inventory_number=f'INV-{uuid4().hex}',
+            ),
         )
         assert copy.id is not None
         assert other_copy.id is not None
@@ -68,13 +70,16 @@ def loans_env(
             (copy.id, other_copy.id),
         )
         raw_db.execute(
-            'DELETE FROM library.readers WHERE id = %(id)s', id=reader.id
+            'DELETE FROM library.readers WHERE id = %(id)s',
+            id=reader.id,
         )
         raw_db.execute(
-            'DELETE FROM library.readers WHERE id = %(id)s', id=other_reader.id
+            'DELETE FROM library.readers WHERE id = %(id)s',
+            id=other_reader.id,
         )
         raw_db.execute(
-            'DELETE FROM library.books WHERE id = %(id)s', id=book.id
+            'DELETE FROM library.books WHERE id = %(id)s',
+            id=book.id,
         )
         return
     in_memory: LoansRepo = request.getfixturevalue('in_memory_loans_repo')
@@ -92,7 +97,7 @@ def test_saved_loan_is_read_back(
 ) -> None:
     repo, (reader_id, _), (copy_id, _) = loans_env
     loan = repo.save(
-        loan_factory(reader_id=reader_id, copy_id=copy_id)
+        loan_factory(reader_id=reader_id, copy_id=copy_id),
     )
 
     loaded = _load(repo, loan)
@@ -119,7 +124,7 @@ def test_extensions_are_read_back_in_order(
             reader_id=reader_id,
             copy_id=copy_id,
             extensions=extensions,
-        )
+        ),
     )
 
     loaded = _load(repo, loan)
@@ -133,7 +138,7 @@ def test_update_rewrites_fields_and_extensions(
 ) -> None:
     repo, (reader_id, _), (copy_id, _) = loans_env
     loan = repo.save(
-        loan_factory(reader_id=reader_id, copy_id=copy_id)
+        loan_factory(reader_id=reader_id, copy_id=copy_id),
     )
     loan.period = LoanPeriod(start=TODAY, due=TODAY + timedelta(days=20))
     loan.returned_at = TOMORROW
@@ -164,10 +169,11 @@ def test_extensions_can_be_removed(
             copy_id=copy_id,
             extensions=[
                 Extension(
-                    extended_at=TOMORROW, new_due=TODAY + timedelta(days=21)
-                )
+                    extended_at=TOMORROW,
+                    new_due=TODAY + timedelta(days=21),
+                ),
             ],
-        )
+        ),
     )
     loan.extensions = []
 
@@ -238,7 +244,7 @@ def seeded_loans(
     period = LoanPeriod(start=TODAY - timedelta(days=30), due=YESTERDAY)
     return [
         repo.save(
-            loan_factory(reader_id=reader_id, copy_id=copy_id, period=period)
+            loan_factory(reader_id=reader_id, copy_id=copy_id, period=period),
         ),
         repo.save(
             loan_factory(
@@ -246,51 +252,54 @@ def seeded_loans(
                 copy_id=copy_id,
                 period=period,
                 returned_at=YESTERDAY,
-            )
+            ),
         ),
         repo.save(
             loan_factory(
                 reader_id=reader_id,
                 copy_id=copy_id,
                 period=LoanPeriod(start=TODAY - timedelta(days=14), due=TODAY),
-            )
+            ),
         ),
         repo.save(
             loan_factory(
                 reader_id=reader_id,
                 copy_id=other_copy_id,
                 period=LoanPeriod(
-                    start=TODAY - timedelta(days=14), due=IN_A_WEEK
+                    start=TODAY - timedelta(days=14),
+                    due=IN_A_WEEK,
                 ),
-            )
+            ),
         ),
         repo.save(
             loan_factory(
                 reader_id=reader_id,
                 copy_id=other_copy_id,
                 period=LoanPeriod(
-                    start=TODAY - timedelta(days=14), due=IN_A_MONTH
+                    start=TODAY - timedelta(days=14),
+                    due=IN_A_MONTH,
                 ),
                 extensions=[
                     Extension(
                         extended_at=TOMORROW,
                         new_due=IN_A_MONTH + timedelta(days=7),
-                    )
+                    ),
                 ],
-            )
+            ),
         ),
         repo.save(
             loan_factory(
                 reader_id=other_reader_id,
                 copy_id=copy_id,
                 period=period,
-            )
+            ),
         ),
     ]
 
 
 def _criteria_map(
-    reader_id: int, other_reader_id: int
+    reader_id: int,
+    other_reader_id: int,
 ) -> dict[str, Criteria[Loan]]:
     return {
         'overdue': Loan.overdue(on=TODAY),
@@ -300,8 +309,7 @@ def _criteria_map(
         'other_reader': Loan.of_reader(reader_id=other_reader_id),
         'overdue_and_of_reader': Loan.overdue(on=TODAY)
         & Loan.of_reader(reader_id=reader_id),
-        'due_within_or_returned': Loan.due_within(on=TODAY, days=7)
-        | Loan.returned(),
+        'due_within_or_returned': Loan.due_within(on=TODAY, days=7) | Loan.returned(),
         'not_returned_and_of_reader': ~Loan.returned()
         & Loan.of_reader(reader_id=reader_id),
         'not_of_reader': ~Loan.of_reader(reader_id=reader_id),
@@ -343,9 +351,7 @@ def test_find_returns_whole_loans_with_extensions(
     repo, (reader_id, _), _ = loans_env
 
     found = repo.find(Loan.of_reader(reader_id=reader_id))
-    expected = [
-        loan for loan in seeded_loans if loan.reader_id == reader_id
-    ]
+    expected = [loan for loan in seeded_loans if loan.reader_id == reader_id]
 
     assert found == expected
     assert len(found[-1].extensions) == 1

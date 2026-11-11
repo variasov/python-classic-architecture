@@ -8,14 +8,14 @@ from library.app.roles import Account, Permissions
 
 @dataclass(frozen=True)
 class ExtendMembershipParams:
-    """Параметры продления абонемента"""
+    """Параметры продления абонемента."""
 
     reader_id: int
     valid_until: date
 
 
 class ExtendMembership:
-    """Продление абонемента читателя"""
+    """Продление абонемента читателя."""
 
     def __init__(self, readers: ReadersRepo, logger: logging.Logger) -> None:
         self._readers = readers

@@ -67,7 +67,7 @@ class ReaderNotBlocked(DomainError):
 
 @dataclass(frozen=True)
 class Contact:
-    """Объект-значение: контакты читателя"""
+    """Объект-значение: контакты читателя."""
 
     email: str
     phone: str | None = None
@@ -79,7 +79,7 @@ class Contact:
 
 @dataclass(frozen=True)
 class Membership:
-    """Объект-значение: абонемент читателя"""
+    """Объект-значение: абонемент читателя."""
 
     TIER_LOAN_LIMITS: ClassVar[dict[str, int]] = {'basic': 3, 'premium': 10}
 
@@ -97,7 +97,7 @@ class Membership:
 
 @dataclass
 class Reader:
-    """Корень агрегата: читатель"""
+    """Корень агрегата: читатель."""
 
     full_name: str
     contact: Contact
@@ -107,7 +107,7 @@ class Reader:
 
     def check(self) -> None:
         if not self.full_name.strip():
-            raise ReaderNameEmpty()
+            raise ReaderNameEmpty
         self.contact.check()
         self.membership.check()
 

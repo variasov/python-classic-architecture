@@ -7,7 +7,7 @@ from library.app.roles import Account, Permissions
 
 @dataclass(frozen=True)
 class CreateBookParams:
-    """Параметры создания книги"""
+    """Параметры создания книги."""
 
     isbn: str
     title: str
@@ -22,7 +22,7 @@ class CreateBookParams:
 
 
 class CreateBook:
-    """Создание книги"""
+    """Создание книги."""
 
     def __init__(self, books: BooksRepo, logger: logging.Logger) -> None:
         self._books = books

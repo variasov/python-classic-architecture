@@ -4,7 +4,7 @@ from datetime import date
 import pytest
 from classic.criteria import ReturnsTrue
 
-from library.app.commands.domain.copy import Copy, CopyNotTaken, CopiesRepo
+from library.app.commands.domain.copy import CopiesRepo, Copy, CopyNotTaken
 from library.app.commands.domain.loan import (
     Loan,
     LoanAlreadyReturned,
@@ -49,7 +49,7 @@ def loan(
         loan_factory(
             copy_id=taken_copy.id,
             period=LoanPeriod(start=TODAY, due=TOMORROW),
-        )
+        ),
     )
 
 
@@ -92,7 +92,7 @@ def test_return_copy_of_returned_loan_keeps_copy_taken(
             copy_id=_copy_id(taken_copy),
             period=LoanPeriod(start=TODAY, due=TOMORROW),
             returned_at=TODAY,
-        )
+        ),
     )
 
     with pytest.raises(LoanAlreadyReturned):
@@ -123,7 +123,7 @@ def test_return_copy_of_available_copy_raises(
         loan_factory(
             copy_id=_copy_id(copy),
             period=LoanPeriod(start=TODAY, due=TOMORROW),
-        )
+        ),
     )
 
     with pytest.raises(CopyNotTaken):

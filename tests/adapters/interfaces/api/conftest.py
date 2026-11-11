@@ -57,7 +57,7 @@ class ProbeResource:
             {
                 'login': account.login if account else None,
                 'permissions': list(account.permissions) if account else [],
-            }
+            },
         ).encode()
 
     def on_post(self, req: falcon.Request, resp: falcon.Response) -> None:
@@ -76,7 +76,9 @@ class FakeUseCase:
     """Заглушка usecase: запоминает параметры, возвращает заданный результат"""
 
     def __init__(
-        self, result: Any = None, error: Exception | None = None
+        self,
+        result: Any = None,
+        error: Exception | None = None,
     ) -> None:
         self.result = result
         self.error = error
@@ -93,7 +95,9 @@ class FakeQuery:
     """Заглушка запроса: запоминает параметры, возвращает заданный результат"""
 
     def __init__(
-        self, result: Any = None, error: Exception | None = None
+        self,
+        result: Any = None,
+        error: Exception | None = None,
     ) -> None:
         self.result = result
         self.error = error
@@ -172,8 +176,8 @@ def find_books_fake() -> Any:
                 authors=['Лев Толстой'],
                 published_year=1869,
                 available_copies=2,
-            )
-        ]
+            ),
+        ],
     )
 
 
@@ -194,9 +198,9 @@ def get_book_fake() -> Any:
                     rack=2,
                     shelf=3,
                     is_available=True,
-                )
+                ),
             ],
-        )
+        ),
     )
 
 
@@ -212,8 +216,8 @@ def find_loans_fake() -> Any:
                 due=date(2026, 3, 15),
                 returned_at=None,
                 extensions_count=1,
-            )
-        ]
+            ),
+        ],
     )
 
 
@@ -227,8 +231,8 @@ def find_readers_fake() -> Any:
                 email='ivan@example.com',
                 active_loans=1,
                 overdue_loans=0,
-            )
-        ]
+            ),
+        ],
     )
 
 
@@ -253,7 +257,8 @@ def client(
     app = create_app(
         api_settings,
         books=BooksResource(
-            create_book=create_book_fake, find_books=find_books_fake
+            create_book=create_book_fake,
+            find_books=find_books_fake,
         ),
         copies=CopiesResource(add_copy=create_copies_fake),
         readers=ReadersResource(
@@ -262,16 +267,18 @@ def client(
         ),
         book=BookResource(get_book=get_book_fake),
         catalog_books=CatalogBooksResource(
-            create_book_from_catalog=create_catalog_book_fake
+            create_book_from_catalog=create_catalog_book_fake,
         ),
         memberships=MembershipsResource(
-            extend_membership=extend_membership_fake
+            extend_membership=extend_membership_fake,
         ),
         reader_blocks=ReaderBlocksResource(
-            block_reader=block_reader_fake, unblock_reader=unblock_reader_fake
+            block_reader=block_reader_fake,
+            unblock_reader=unblock_reader_fake,
         ),
         loans=LoansResource(
-            find_loans=find_loans_fake, issue_loan=issue_loan_fake
+            find_loans=find_loans_fake,
+            issue_loan=issue_loan_fake,
         ),
         loan_extensions=LoanExtensionsResource(extend_loan=extend_loan_fake),
         returns=ReturnsResource(return_loan=return_loan_fake),

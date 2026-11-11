@@ -13,7 +13,7 @@ from library.app.commands.domain.reader import (
 
 
 class DbReadersRepo(ReadersRepo):
-    """Репозиторий читателей поверх PostgreSQL"""
+    """Репозиторий читателей поверх PostgreSQL."""
 
     def __init__(self, db: Engine[Any]) -> None:
         self._db = db
@@ -43,11 +43,11 @@ class DbReadersRepo(ReadersRepo):
         params = self._params(reader)
         if reader.id is None:
             reader.id = self._db.query_from('aggregates/readers/insert.sql').scalar(
-                **params
+                **params,
             )
         else:
             updated = self._db.query_from('aggregates/readers/update.sql').scalar(
-                **params
+                **params,
             )
             if updated is None:
                 raise ReaderNotFound(id=reader.id)

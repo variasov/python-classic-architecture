@@ -6,14 +6,14 @@ from library.app.errors import AppError
 
 @dataclass(frozen=True)
 class GetBookParams:
-    """Параметры карточки книги"""
+    """Параметры карточки книги."""
 
     id: int
 
 
 @dataclass(frozen=True)
 class BookCopyDTO:
-    """Экземпляр в карточке книги вместе с местом на полке"""
+    """Экземпляр в карточке книги вместе с местом на полке."""
 
     id: int
     inventory_number: str
@@ -25,7 +25,7 @@ class BookCopyDTO:
 
 @dataclass(frozen=True)
 class BookCardDTO:
-    """Карточка книги с экземплярами"""
+    """Карточка книги с экземплярами."""
 
     id: int
     isbn: str
@@ -33,7 +33,7 @@ class BookCardDTO:
     authors: list[str]
     published_year: int
     copies: list[BookCopyDTO] = field(
-        default_factory=list[BookCopyDTO]
+        default_factory=list[BookCopyDTO],
     )
 
 
@@ -46,14 +46,14 @@ class GetBookNotFound(AppError):
 
 
 class GetBookGateway(ABC):
-    """Чтение карточки книги"""
+    """Чтение карточки книги."""
 
     @abstractmethod
     def run(self, params: GetBookParams) -> BookCardDTO | None: ...
 
 
 class GetBook:
-    """Карточка книги с экземплярами"""
+    """Карточка книги с экземплярами."""
 
     def __init__(self, gateway: GetBookGateway) -> None:
         self._gateway = gateway

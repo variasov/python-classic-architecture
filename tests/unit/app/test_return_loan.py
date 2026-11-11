@@ -4,7 +4,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from library.app.commands.domain.copy import Copy, CopiesRepo
+from library.app.commands.domain.copy import CopiesRepo, Copy
 from library.app.commands.domain.loan import (
     Loan,
     LoanAlreadyReturned,
@@ -69,7 +69,7 @@ def loan(
                 start=TODAY - timedelta(days=7),
                 due=TODAY + timedelta(days=7),
             ),
-        )
+        ),
     )
 
 
@@ -121,7 +121,8 @@ def test_requires_permission_before_storage(
 ) -> None:
     with pytest.raises(PermissionDenied):
         return_loan.run(
-            ReturnLoanParams(loan_id=_id(loan)), no_loans_permission
+            ReturnLoanParams(loan_id=_id(loan)),
+            no_loans_permission,
         )
 
     assert loans_repo.get_by_id(_id(loan)).returned_at is None

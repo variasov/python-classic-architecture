@@ -19,7 +19,9 @@ class ReaderBlocksResource:
     _unblock_validator: ClassVar = TypeAdapter(UnblockReaderParams)
 
     def __init__(
-        self, block_reader: BlockReader, unblock_reader: UnblockReader
+        self,
+        block_reader: BlockReader,
+        unblock_reader: UnblockReader,
     ) -> None:
         self._block_reader = block_reader
         self._unblock_reader = unblock_reader

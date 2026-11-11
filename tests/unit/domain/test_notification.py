@@ -73,7 +73,7 @@ def test_of_kind_lazy(
 
     assert criteria.is_satisfied_by(notification)
     assert not Notification.of_kind(
-        kind=NotificationKind.loan_issued
+        kind=NotificationKind.loan_issued,
     ).is_satisfied_by(notification)
 
 
@@ -81,20 +81,20 @@ def test_criteria_combinations(
     notification_factory: Callable[..., Notification],
 ) -> None:
     notification = notification_factory(
-        loan_id=5, kind=NotificationKind.loan_issued
+        loan_id=5,
+        kind=NotificationKind.loan_issued,
     )
-    matching = (
-        Notification.about_loan(loan_id=5)
-        & Notification.of_kind(kind=NotificationKind.loan_issued)
+    matching = Notification.about_loan(loan_id=5) & Notification.of_kind(
+        kind=NotificationKind.loan_issued
     )
     other_loan = Notification.about_loan(loan_id=6) | Notification.of_kind(
-        kind=NotificationKind.loan_issued
+        kind=NotificationKind.loan_issued,
     )
 
     assert matching.is_satisfied_by(notification)
     assert other_loan.is_satisfied_by(notification)
     assert not (~Notification.about_loan(loan_id=5)).is_satisfied_by(
-        notification
+        notification,
     )
 
 

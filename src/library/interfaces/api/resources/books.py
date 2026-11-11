@@ -18,7 +18,7 @@ from library.interfaces.api.middleware import current_account
 
 @dataclass(frozen=True)
 class BookCreated:
-    """Контракт ответа на создание книги"""
+    """Контракт ответа на создание книги."""
 
     id: int
 

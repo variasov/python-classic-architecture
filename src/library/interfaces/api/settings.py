@@ -21,7 +21,7 @@ DEFAULT_USERS: Final[dict[str, list[str]]] = {
 
 
 class ApiSettings(BaseSettings):
-    """Настройки HTTP API и демо-таблицы пользователей"""
+    """Настройки HTTP API и демо-таблицы пользователей."""
 
     API_HOST: str
     API_PORT: int

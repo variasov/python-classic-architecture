@@ -8,7 +8,7 @@ ANONYMOUS = Account(login='anonymous', permissions=())
 
 
 class UserMiddleware:
-    """Демо-аутентификация: строит Account по заголовку X-User"""
+    """Демо-аутентификация: строит Account по заголовку X-User."""
 
     def __init__(self, users: Mapping[str, Collection[str]]) -> None:
         self._users = users
@@ -17,12 +17,13 @@ class UserMiddleware:
         login = req.get_header('X-User')
         if login is not None and login in self._users:
             req.context.account = Account(
-                login=login, permissions=tuple(self._users[login])
+                login=login,
+                permissions=tuple(self._users[login]),
             )
 
 
 def current_account(req: falcon.Request) -> Account:
-    """Аккаунт текущего запроса; без известного X-User прав нет"""
+    """Аккаунт текущего запроса; без известного X-User прав нет."""
     account = getattr(req.context, 'account', None)
     if isinstance(account, Account):
         return account

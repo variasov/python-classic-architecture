@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 
 from library.app.commands.domain.book import Book, BooksRepo
-from library.app.commands.domain.copy import Copy, CopiesRepo
+from library.app.commands.domain.copy import CopiesRepo, Copy
 from library.app.commands.domain.loan import (
     Extension,
     Loan,
@@ -39,8 +39,9 @@ def seeded_loans(
     copies = [
         db_copies_repo.save(
             copy_factory(
-                book_id=book.id, inventory_number=f'INV-{uuid4().hex}'
-            )
+                book_id=book.id,
+                inventory_number=f'INV-{uuid4().hex}',
+            ),
         )
         for _ in range(2)
     ]
@@ -55,10 +56,12 @@ def seeded_loans(
     assert first_reader.id is not None
     assert second_reader.id is not None
     overdue_period = LoanPeriod(
-        start=TODAY - timedelta(days=30), due=YESTERDAY
+        start=TODAY - timedelta(days=30),
+        due=YESTERDAY,
     )
     active_period = LoanPeriod(
-        start=TODAY, due=TODAY + timedelta(days=Loan.TERM_DAYS)
+        start=TODAY,
+        due=TODAY + timedelta(days=Loan.TERM_DAYS),
     )
     loans = [
         db_loans_repo.save(
@@ -69,18 +72,17 @@ def seeded_loans(
                 extensions=[
                     Extension(
                         extended_at=TOMORROW,
-                        new_due=TODAY
-                        + timedelta(days=Loan.TERM_DAYS + 7),
-                    )
+                        new_due=TODAY + timedelta(days=Loan.TERM_DAYS + 7),
+                    ),
                 ],
-            )
+            ),
         ),
         db_loans_repo.save(
             loan_factory(
                 reader_id=first_reader.id,
                 copy_id=first_copy.id,
                 period=overdue_period,
-            )
+            ),
         ),
         db_loans_repo.save(
             loan_factory(
@@ -88,14 +90,14 @@ def seeded_loans(
                 copy_id=second_copy.id,
                 period=overdue_period,
                 returned_at=TODAY,
-            )
+            ),
         ),
         db_loans_repo.save(
             loan_factory(
                 reader_id=second_reader.id,
                 copy_id=second_copy.id,
                 period=active_period,
-            )
+            ),
         ),
     ]
     return readers, loans
@@ -125,7 +127,8 @@ def test_filters_by_reader(
     assert first_reader.id is not None
 
     found = db_find_loans_gateway.run(
-        FindLoansParams(reader_id=first_reader.id), on=TODAY
+        FindLoansParams(reader_id=first_reader.id),
+        on=TODAY,
     )
 
     expected = [loan for loan in loans if loan.reader_id == first_reader.id]
@@ -139,7 +142,8 @@ def test_filters_only_active(
     _, loans = seeded_loans
 
     found = db_find_loans_gateway.run(
-        FindLoansParams(only_active=True), on=TODAY
+        FindLoansParams(only_active=True),
+        on=TODAY,
     )
 
     expected = [loan for loan in loans if loan.returned_at is None]
@@ -153,13 +157,12 @@ def test_filters_only_overdue(
     _, loans = seeded_loans
 
     found = db_find_loans_gateway.run(
-        FindLoansParams(only_overdue=True), on=TODAY
+        FindLoansParams(only_overdue=True),
+        on=TODAY,
     )
 
     expected = [
-        loan
-        for loan in loans
-        if loan.returned_at is None and loan.period.due < TODAY
+        loan for loan in loans if loan.returned_at is None and loan.period.due < TODAY
     ]
     assert [item.id for item in found] == _ids(expected)
 
@@ -219,8 +222,7 @@ def test_maps_dto_fields(
     with_extension, overdue, returned, _ = loans
 
     found = {
-        item.id: item
-        for item in db_find_loans_gateway.run(FindLoansParams(), on=TODAY)
+        item.id: item for item in db_find_loans_gateway.run(FindLoansParams(), on=TODAY)
     }
 
     assert with_extension.id is not None
@@ -258,7 +260,8 @@ def test_paginates(
     _, loans = seeded_loans
 
     found = db_find_loans_gateway.run(
-        FindLoansParams(limit=limit, offset=offset), on=TODAY
+        FindLoansParams(limit=limit, offset=offset),
+        on=TODAY,
     )
 
     assert [item.id for item in found] == [

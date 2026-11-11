@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 
 from library.app.commands.domain.book import Book, BooksRepo
-from library.app.commands.domain.copy import Copy, CopiesRepo
+from library.app.commands.domain.copy import CopiesRepo, Copy
 from library.app.commands.domain.loan import (
     Loan,
     LoanPeriod,
@@ -40,7 +40,7 @@ def seeded_readers(
     book = db_books_repo.save(book_factory())
     assert book.id is not None
     copy = db_copies_repo.save(
-        copy_factory(book_id=book.id, inventory_number=f'INV-{uuid4().hex}')
+        copy_factory(book_id=book.id, inventory_number=f'INV-{uuid4().hex}'),
     )
     assert copy.id is not None
     readers = [
@@ -48,19 +48,19 @@ def seeded_readers(
             reader_factory(
                 full_name='Первый читатель',
                 contact=Contact(email=f'first-{uuid4().hex}@example.com'),
-            )
+            ),
         ),
         db_readers_repo.save(
             reader_factory(
                 full_name='Второй читатель',
                 contact=Contact(email=f'second-{uuid4().hex}@example.com'),
-            )
+            ),
         ),
         db_readers_repo.save(
             reader_factory(
                 full_name='Третий читатель',
                 contact=Contact(email=f'third-{uuid4().hex}@example.com'),
-            )
+            ),
         ),
     ]
     first = readers[0]
@@ -73,9 +73,10 @@ def seeded_readers(
                 reader_id=first.id,
                 copy_id=copy.id,
                 period=LoanPeriod(
-                    start=TODAY - timedelta(days=30), due=YESTERDAY
+                    start=TODAY - timedelta(days=30),
+                    due=YESTERDAY,
                 ),
-            )
+            ),
         ),
         db_loans_repo.save(
             loan_factory(
@@ -85,27 +86,29 @@ def seeded_readers(
                     start=TODAY - timedelta(days=5),
                     due=TODAY + timedelta(days=5),
                 ),
-            )
+            ),
         ),
         db_loans_repo.save(
             loan_factory(
                 reader_id=first.id,
                 copy_id=copy.id,
                 period=LoanPeriod(
-                    start=TODAY - timedelta(days=30), due=YESTERDAY
+                    start=TODAY - timedelta(days=30),
+                    due=YESTERDAY,
                 ),
                 returned_at=TODAY,
-            )
+            ),
         ),
         db_loans_repo.save(
             loan_factory(
                 reader_id=third.id,
                 copy_id=copy.id,
                 period=LoanPeriod(
-                    start=TODAY - timedelta(days=30), due=YESTERDAY
+                    start=TODAY - timedelta(days=30),
+                    due=YESTERDAY,
                 ),
                 returned_at=TOMORROW,
-            )
+            ),
         ),
     ]
     return readers, loans
@@ -160,7 +163,8 @@ def test_overdue_depends_on_request_date(
     assert first.id is not None
 
     found = db_find_readers_gateway.run(
-        FindReadersParams(), on=TODAY + timedelta(days=10)
+        FindReadersParams(),
+        on=TODAY + timedelta(days=10),
     )
 
     counts = {item.id: (item.active_loans, item.overdue_loans) for item in found}
@@ -186,7 +190,8 @@ def test_paginates(
     readers, _ = seeded_readers
 
     found = db_find_readers_gateway.run(
-        FindReadersParams(limit=limit, offset=offset), on=TODAY
+        FindReadersParams(limit=limit, offset=offset),
+        on=TODAY,
     )
 
     assert [item.id for item in found] == [

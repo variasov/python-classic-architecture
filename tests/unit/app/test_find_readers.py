@@ -24,7 +24,8 @@ class FrozenDate(date):
 @pytest.fixture
 def frozen_today(monkeypatch: pytest.MonkeyPatch) -> date:
     monkeypatch.setattr(
-        'library.app.queries.readers.find_readers.date', FrozenDate
+        'library.app.queries.readers.find_readers.date',
+        FrozenDate,
     )
     return FROZEN_TODAY
 

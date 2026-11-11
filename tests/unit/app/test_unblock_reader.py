@@ -6,8 +6,8 @@ from classic.criteria import ReturnsTrue
 
 from library.app.commands.domain.reader import (
     Reader,
-    ReaderNotFound,
     ReaderNotBlocked,
+    ReaderNotFound,
     ReadersRepo,
 )
 from library.app.commands.use_cases.readers.unblock_reader import (
@@ -44,7 +44,8 @@ def no_readers_permission() -> Account:
 
 @pytest.fixture
 def blocked_reader(
-    readers_repo: ReadersRepo, reader_factory: Callable[..., Reader]
+    readers_repo: ReadersRepo,
+    reader_factory: Callable[..., Reader],
 ) -> Reader:
     return readers_repo.save(reader_factory(is_blocked=True))
 
@@ -62,7 +63,8 @@ def test_unblocks_reader(
     unblock_reader_params: Callable[..., UnblockReaderParams],
 ) -> None:
     unblock_reader.run(
-        unblock_reader_params(reader_id=blocked_reader.id), admin
+        unblock_reader_params(reader_id=blocked_reader.id),
+        admin,
     )
 
     assert _load(readers_repo, blocked_reader).is_blocked is False
@@ -104,7 +106,8 @@ def test_requires_permission_before_storage(
 ) -> None:
     with pytest.raises(PermissionDenied):
         unblock_reader.run(
-            unblock_reader_params(reader_id=987654), no_readers_permission
+            unblock_reader_params(reader_id=987654),
+            no_readers_permission,
         )
 
     assert _load(readers_repo, blocked_reader).is_blocked is True

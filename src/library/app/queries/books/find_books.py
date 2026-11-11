@@ -5,7 +5,7 @@ from typing import ClassVar, Literal
 
 @dataclass(frozen=True)
 class FindBooksParams:
-    """Параметры поиска книг"""
+    """Параметры поиска книг."""
 
     MAX_LIMIT: ClassVar[int] = 100
     MIN_SEARCH_LENGTH: ClassVar[int] = 3
@@ -27,7 +27,7 @@ class FindBooksParams:
         search = self.title__contains
         if search is not None and len(search) < self.MIN_SEARCH_LENGTH:
             raise ValueError(
-                f'Строка поиска короче {self.MIN_SEARCH_LENGTH} символов'
+                f'Строка поиска короче {self.MIN_SEARCH_LENGTH} символов',
             )
         if (
             self.year_from is not None
@@ -39,7 +39,7 @@ class FindBooksParams:
 
 @dataclass(frozen=True)
 class BookListItemDTO:
-    """Книга в результатах поиска"""
+    """Книга в результатах поиска."""
 
     id: int
     isbn: str
@@ -50,14 +50,14 @@ class BookListItemDTO:
 
 
 class FindBooksGateway(ABC):
-    """Поиск книг с фильтрами и пагинацией"""
+    """Поиск книг с фильтрами и пагинацией."""
 
     @abstractmethod
     def run(self, params: FindBooksParams) -> list[BookListItemDTO]: ...
 
 
 class FindBooks:
-    """Поиск книг"""
+    """Поиск книг."""
 
     def __init__(self, gateway: FindBooksGateway) -> None:
         self._gateway = gateway

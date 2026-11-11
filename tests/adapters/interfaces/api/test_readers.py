@@ -22,10 +22,13 @@ READER: dict[str, Any] = {
 
 @pytest.mark.parametrize('limit', ['0', '-1', '101'])
 def test_find_readers_invalid_limit_is_400(
-    client: testing.TestClient, find_readers_fake: Any, limit: str
+    client: testing.TestClient,
+    find_readers_fake: Any,
+    limit: str,
 ) -> None:
     response = client.simulate_get(
-        '/library/readers', params={'limit': limit}
+        '/library/readers',
+        params={'limit': limit},
     )
 
     assert response.status_code == 400
@@ -33,10 +36,12 @@ def test_find_readers_invalid_limit_is_400(
 
 
 def test_find_readers_negative_offset_is_400(
-    client: testing.TestClient, find_readers_fake: Any
+    client: testing.TestClient,
+    find_readers_fake: Any,
 ) -> None:
     response = client.simulate_get(
-        '/library/readers', params={'offset': '-1'}
+        '/library/readers',
+        params={'offset': '-1'},
     )
 
     assert response.status_code == 400
@@ -44,10 +49,12 @@ def test_find_readers_negative_offset_is_400(
 
 
 def test_find_readers_returns_200_and_list(
-    client: testing.TestClient, find_readers_fake: Any
+    client: testing.TestClient,
+    find_readers_fake: Any,
 ) -> None:
     response = client.simulate_get(
-        '/library/readers', params={'limit': '5', 'offset': '10'}
+        '/library/readers',
+        params={'limit': '5', 'offset': '10'},
     )
 
     assert response.status_code == 200
@@ -58,15 +65,16 @@ def test_find_readers_returns_200_and_list(
             'email': 'ivan@example.com',
             'active_loans': 1,
             'overdue_loans': 0,
-        }
+        },
     ]
     assert find_readers_fake.calls == [
-        FindReadersParams(limit=5, offset=10)
+        FindReadersParams(limit=5, offset=10),
     ]
 
 
 def test_find_readers_uses_default_params(
-    client: testing.TestClient, find_readers_fake: Any
+    client: testing.TestClient,
+    find_readers_fake: Any,
 ) -> None:
     client.simulate_get('/library/readers')
 
@@ -75,7 +83,9 @@ def test_find_readers_uses_default_params(
 
 def test_register_reader_returns_201_and_id(client: testing.TestClient) -> None:
     response = client.simulate_post(
-        '/library/readers', headers={'X-User': 'admin'}, json=READER
+        '/library/readers',
+        headers={'X-User': 'admin'},
+        json=READER,
     )
 
     assert response.status_code == 201
@@ -83,10 +93,13 @@ def test_register_reader_returns_201_and_id(client: testing.TestClient) -> None:
 
 
 def test_request_body_is_parsed_into_params(
-    client: testing.TestClient, register_reader_fake: Any
+    client: testing.TestClient,
+    register_reader_fake: Any,
 ) -> None:
     client.simulate_post(
-        '/library/readers', headers={'X-User': 'admin'}, json=READER
+        '/library/readers',
+        headers={'X-User': 'admin'},
+        json=READER,
     )
 
     params, account = register_reader_fake.calls[0]
@@ -114,7 +127,9 @@ def test_missing_field_is_400(client: testing.TestClient) -> None:
     body = {key: value for key, value in READER.items() if key != 'email'}
 
     response = client.simulate_post(
-        '/library/readers', headers={'X-User': 'admin'}, json=body
+        '/library/readers',
+        headers={'X-User': 'admin'},
+        json=body,
     )
 
     assert response.status_code == 400
@@ -131,12 +146,15 @@ def test_invalid_date_is_400(client: testing.TestClient) -> None:
 
 
 def test_domain_error_is_422(
-    client: testing.TestClient, register_reader_fake: Any
+    client: testing.TestClient,
+    register_reader_fake: Any,
 ) -> None:
     register_reader_fake.error = ContactEmailInvalid(email='ivan.example.com')
 
     response = client.simulate_post(
-        '/library/readers', headers={'X-User': 'admin'}, json=READER
+        '/library/readers',
+        headers={'X-User': 'admin'},
+        json=READER,
     )
 
     assert response.status_code == 422
@@ -146,14 +164,18 @@ def test_domain_error_is_422(
 
 
 def test_permission_denied_is_403(
-    client: testing.TestClient, register_reader_fake: Any
+    client: testing.TestClient,
+    register_reader_fake: Any,
 ) -> None:
     register_reader_fake.error = PermissionDenied(
-        login='guest', permission='readers.edit'
+        login='guest',
+        permission='readers.edit',
     )
 
     response = client.simulate_post(
-        '/library/readers', headers={'X-User': 'guest'}, json=READER
+        '/library/readers',
+        headers={'X-User': 'guest'},
+        json=READER,
     )
 
     assert response.status_code == 403

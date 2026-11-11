@@ -11,7 +11,7 @@ from library.app.commands.domain.borrow_copy import (
     ReaderCannotBorrow,
     ReaderHasOverdueLoans,
 )
-from library.app.commands.domain.copy import Copy, CopyNotAvailable, CopiesRepo
+from library.app.commands.domain.copy import CopiesRepo, Copy, CopyNotAvailable
 from library.app.commands.domain.events import LoanIssued
 from library.app.commands.domain.loan import (
     Loan,
@@ -113,21 +113,24 @@ def test_issues_copy_and_emits_event(
     received: list[LoanIssued],
 ) -> None:
     loan = borrow_copy.run(
-        reader_id=_id(reader), copy_id=_id(copy), on=TODAY
+        reader_id=_id(reader),
+        copy_id=_id(copy),
+        on=TODAY,
     )
 
     assert loan.id is not None
     assert loan.reader_id == reader.id
     assert loan.copy_id == copy.id
     assert loan.period == LoanPeriod(
-        start=TODAY, due=TODAY + timedelta(days=Loan.TERM_DAYS)
+        start=TODAY,
+        due=TODAY + timedelta(days=Loan.TERM_DAYS),
     )
     assert loan.returned_at is None
     assert loan.extensions == []
     assert loans_repo.get_by_id(loan.id) == loan
     assert copies_repo.get_by_id(_id(copy)).is_available is False
     assert received == [
-        LoanIssued(loan_id=loan.id, reader_id=_id(reader))
+        LoanIssued(loan_id=loan.id, reader_id=_id(reader)),
     ]
 
 
@@ -142,8 +145,8 @@ def test_inactive_membership_is_rejected(
 ) -> None:
     reader = readers_repo.save(
         reader_factory(
-            membership=Membership(tier='basic', valid_until=YESTERDAY)
-        )
+            membership=Membership(tier='basic', valid_until=YESTERDAY),
+        ),
     )
 
     with pytest.raises(ReaderCannotBorrow):
@@ -185,8 +188,10 @@ def test_loan_limit_is_reached(
     for copy_index in range(reader.membership.loan_limit):
         loans_repo.save(
             _active_loan(
-                loan_factory, reader_id=_id(reader), copy_id=100 + copy_index
-            )
+                loan_factory,
+                reader_id=_id(reader),
+                copy_id=100 + copy_index,
+            ),
         )
 
     with pytest.raises(LoanLimitReached) as error:
@@ -214,16 +219,18 @@ def test_returned_loans_do_not_count_towards_limit(
                 copy_id=100 + copy_index,
                 due=TOMORROW,
                 returned_at=TODAY,
-            )
+            ),
         )
 
     loan = borrow_copy.run(
-        reader_id=_id(reader), copy_id=_id(copy), on=TODAY
+        reader_id=_id(reader),
+        copy_id=_id(copy),
+        on=TODAY,
     )
 
     assert loan.id is not None
     assert received == [
-        LoanIssued(loan_id=loan.id, reader_id=_id(reader))
+        LoanIssued(loan_id=loan.id, reader_id=_id(reader)),
     ]
 
 
@@ -242,7 +249,7 @@ def test_overdue_loans_are_rejected(
             reader_id=_id(reader),
             copy_id=100,
             due=YESTERDAY,
-        )
+        ),
     )
 
     with pytest.raises(ReaderHasOverdueLoans):
@@ -266,11 +273,13 @@ def test_returned_overdue_loan_does_not_block(
             copy_id=100,
             due=YESTERDAY,
             returned_at=TODAY,
-        )
+        ),
     )
 
     loan = borrow_copy.run(
-        reader_id=_id(reader), copy_id=_id(copy), on=TODAY
+        reader_id=_id(reader),
+        copy_id=_id(copy),
+        on=TODAY,
     )
 
     assert loan.id is not None
@@ -289,11 +298,13 @@ def test_loan_due_today_is_not_overdue(
             reader_id=_id(reader),
             copy_id=100,
             due=TODAY,
-        )
+        ),
     )
 
     issued = borrow_copy.run(
-        reader_id=_id(reader), copy_id=_id(copy), on=TODAY
+        reader_id=_id(reader),
+        copy_id=_id(copy),
+        on=TODAY,
     )
 
     assert issued.id is not None
@@ -311,7 +322,9 @@ def test_unavailable_copy_is_rejected(
 
     with pytest.raises(CopyNotAvailable):
         borrow_copy.run(
-            reader_id=_id(reader), copy_id=_id(unavailable), on=TODAY
+            reader_id=_id(reader),
+            copy_id=_id(unavailable),
+            on=TODAY,
         )
 
     assert loans_repo.find(ReturnsTrue()) == []

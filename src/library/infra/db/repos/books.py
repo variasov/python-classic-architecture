@@ -7,7 +7,7 @@ from library.app.commands.domain.book import Book, BookNotFound, BooksRepo
 
 
 class DbBooksRepo(BooksRepo):
-    """Репозиторий книг поверх PostgreSQL"""
+    """Репозиторий книг поверх PostgreSQL."""
 
     def __init__(self, db: Engine[Any]) -> None:
         self._db = db
@@ -26,11 +26,11 @@ class DbBooksRepo(BooksRepo):
         book.check()
         if book.id is None:
             book.id = self._db.query_from('aggregates/books/insert.sql').scalar(
-                **book.__dict__
+                **book.__dict__,
             )
         else:
             updated = self._db.query_from('aggregates/books/update.sql').scalar(
-                **book.__dict__
+                **book.__dict__,
             )
             if updated is None:
                 raise BookNotFound(id=book.id)
@@ -48,7 +48,7 @@ class DbBooksRepo(BooksRepo):
     def _sync_authors(self, book: Book) -> None:
         assert book.id is not None
         self._db.query_from('aggregates/books/delete_authors.sql').execute(
-            book_id=book.id
+            book_id=book.id,
         )
         rows = [
             {'book_id': book.id, 'position': position, 'name': name}

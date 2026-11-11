@@ -50,7 +50,9 @@ def _delete_reader(raw_db: Any, email: str) -> None:
 def _create_book(client: testing.TestClient, raw_db: Any, isbn: str) -> int:
     _delete_book(raw_db, isbn)
     response = client.simulate_post(
-        '/library/books', headers={'X-User': 'admin'}, json={**BOOK, 'isbn': isbn}
+        '/library/books',
+        headers={'X-User': 'admin'},
+        json={**BOOK, 'isbn': isbn},
     )
     assert response.status_code == 201
     book_id: Any = response.json['id']
@@ -61,14 +63,17 @@ def _create_book(client: testing.TestClient, raw_db: Any, isbn: str) -> int:
 def test_create_book_is_saved(client: testing.TestClient, raw_db: Any) -> None:
     try:
         response = client.simulate_post(
-            '/library/books', headers={'X-User': 'admin'}, json=BOOK
+            '/library/books',
+            headers={'X-User': 'admin'},
+            json=BOOK,
         )
 
         assert response.status_code == 201
         book_id: Any = response.json['id']
         assert isinstance(book_id, int)
         title = raw_db.scalar(
-            'SELECT title FROM library.books WHERE id = %(id)s', id=book_id
+            'SELECT title FROM library.books WHERE id = %(id)s',
+            id=book_id,
         )
         assert title == 'Война и мир'
     finally:
@@ -76,7 +81,9 @@ def test_create_book_is_saved(client: testing.TestClient, raw_db: Any) -> None:
 
 
 def test_transaction_rolls_back_on_error(
-    client: testing.TestClient, raw_db: Any, monkeypatch: pytest.MonkeyPatch
+    client: testing.TestClient,
+    raw_db: Any,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from library.infra.db.repos.books import DbBooksRepo
 
@@ -103,7 +110,8 @@ def test_transaction_rolls_back_on_error(
 
 
 def test_add_copy_to_created_book(
-    client: testing.TestClient, raw_db: Any
+    client: testing.TestClient,
+    raw_db: Any,
 ) -> None:
     isbn = '9785171183662'
     try:
@@ -130,19 +138,24 @@ def test_add_copy_to_created_book(
 
 
 def test_duplicate_inventory_number_is_422(
-    client: testing.TestClient, raw_db: Any
+    client: testing.TestClient,
+    raw_db: Any,
 ) -> None:
     isbn = '9785171183663'
     try:
         book_id = _create_book(client, raw_db, isbn)
         payload = {**COPY, 'book_id': book_id, 'inventory_number': 'INV-E2E-2'}
         first = client.simulate_post(
-            '/library/copies', headers={'X-User': 'admin'}, json=payload
+            '/library/copies',
+            headers={'X-User': 'admin'},
+            json=payload,
         )
         assert first.status_code == 201
 
         repeated = client.simulate_post(
-            '/library/copies', headers={'X-User': 'admin'}, json=payload
+            '/library/copies',
+            headers={'X-User': 'admin'},
+            json=payload,
         )
 
         assert repeated.status_code == 422
@@ -154,7 +167,8 @@ def test_duplicate_inventory_number_is_422(
 
 
 def test_book_card_and_search_return_copies(
-    client: testing.TestClient, raw_db: Any
+    client: testing.TestClient,
+    raw_db: Any,
 ) -> None:
     isbn = '9785171183664'
     try:
@@ -176,29 +190,30 @@ def test_book_card_and_search_return_copies(
             assert response.status_code == 201
 
         card = client.simulate_get(
-            '/library/book', params={'id': str(book_id)}
+            '/library/book',
+            params={'id': str(book_id)},
         )
 
         assert card.status_code == 200
         assert card.json['id'] == book_id
         assert card.json['title'] == BOOK['title']
         assert card.json['authors'] == BOOK['authors']
-        assert [
-            copy['inventory_number'] for copy in card.json['copies']
-        ] == ['INV-E2E-11', 'INV-E2E-12']
+        assert [copy['inventory_number'] for copy in card.json['copies']] == [
+            'INV-E2E-11',
+            'INV-E2E-12',
+        ]
         assert card.json['copies'][0]['hall'] == COPY['hall']
         assert card.json['copies'][0]['rack'] == 1
         assert card.json['copies'][0]['shelf'] == COPY['shelf']
         assert card.json['copies'][0]['is_available'] is True
 
         found = client.simulate_get(
-            '/library/books', params={'title__contains': 'Война'}
+            '/library/books',
+            params={'title__contains': 'Война'},
         )
 
         assert found.status_code == 200
-        item = next(
-            book for book in found.json if book['id'] == book_id
-        )
+        item = next(book for book in found.json if book['id'] == book_id)
         assert item['title'] == BOOK['title']
         assert item['available_copies'] == 2
     finally:
@@ -206,7 +221,8 @@ def test_book_card_and_search_return_copies(
 
 
 def test_reader_and_loan_lists_reflect_issue_and_return(
-    client: testing.TestClient, raw_db: Any
+    client: testing.TestClient,
+    raw_db: Any,
 ) -> None:
     isbn = '9785171183671'
     email = 'reader-queries-e2e@example.com'
@@ -216,17 +232,19 @@ def test_reader_and_loan_lists_reflect_issue_and_return(
     reader_id: int | None = None
     try:
         book_id, copy_id, reader_id = _create_loan_entities(
-            client, isbn, 'INV-E2E-LIST-1', email
+            client,
+            isbn,
+            'INV-E2E-LIST-1',
+            email,
         )
 
         def reader_item() -> dict[str, Any]:
             response = client.simulate_get(
-                '/library/readers', params={'limit': '100'}
+                '/library/readers',
+                params={'limit': '100'},
             )
             assert response.status_code == 200
-            return next(
-                item for item in response.json if item['id'] == reader_id
-            )
+            return next(item for item in response.json if item['id'] == reader_id)
 
         initial = reader_item()
         assert initial['full_name'] == READER['full_name']
@@ -260,7 +278,7 @@ def test_reader_and_loan_lists_reflect_issue_and_return(
                 'due': str(date.today() + timedelta(days=Loan.TERM_DAYS)),
                 'returned_at': None,
                 'extensions_count': 0,
-            }
+            },
         ]
 
         returned = client.simulate_post(
@@ -279,7 +297,8 @@ def test_reader_and_loan_lists_reflect_issue_and_return(
             == []
         )
         all_loans = client.simulate_get(
-            '/library/loans', params={'reader_id': str(reader_id)}
+            '/library/loans',
+            params={'reader_id': str(reader_id)},
         )
         assert all_loans.status_code == 200
         assert [item['id'] for item in all_loans.json] == [loan_id]
@@ -287,11 +306,13 @@ def test_reader_and_loan_lists_reflect_issue_and_return(
     finally:
         if reader_id is not None:
             raw_db.execute(
-                'DELETE FROM library.readers WHERE id = %(id)s', id=reader_id
+                'DELETE FROM library.readers WHERE id = %(id)s',
+                id=reader_id,
             )
         if book_id is not None:
             raw_db.execute(
-                'DELETE FROM library.books WHERE id = %(id)s', id=book_id
+                'DELETE FROM library.books WHERE id = %(id)s',
+                id=book_id,
             )
 
 
@@ -309,7 +330,8 @@ def test_create_book_from_catalog(
     catalog_server.clear()
     catalog_server.clear_all_handlers()
     catalog_server.expect_oneshot_request(
-        '/books', query_string={'isbn': isbn}
+        '/books',
+        query_string={'isbn': isbn},
     ).respond_with_json(_catalog_payload(isbn))
     try:
         response = client.simulate_post(
@@ -328,10 +350,13 @@ def test_create_book_from_catalog(
             )
             == 'Преступление и наказание'
         )
-        assert raw_db.scalar(
-            'SELECT published_year FROM library.books WHERE id = %(id)s',
-            id=book_id,
-        ) == 1866
+        assert (
+            raw_db.scalar(
+                'SELECT published_year FROM library.books WHERE id = %(id)s',
+                id=book_id,
+            )
+            == 1866
+        )
         assert raw_db.scalars(
             'SELECT name FROM library.book_authors '
             'WHERE book_id = %(id)s ORDER BY position',
@@ -353,10 +378,12 @@ def test_create_book_from_catalog_retries_temporary_failure(
     catalog_server.clear()
     catalog_server.clear_all_handlers()
     catalog_server.expect_oneshot_request(
-        '/books', query_string={'isbn': isbn}
+        '/books',
+        query_string={'isbn': isbn},
     ).respond_with_data('temporary failure', status=500)
     catalog_server.expect_oneshot_request(
-        '/books', query_string={'isbn': isbn}
+        '/books',
+        query_string={'isbn': isbn},
     ).respond_with_json(_catalog_payload(isbn))
     try:
         response = client.simulate_post(
@@ -367,10 +394,13 @@ def test_create_book_from_catalog_retries_temporary_failure(
 
         assert response.status_code == 201
         book_id: Any = response.json['id']
-        assert raw_db.scalar(
-            'SELECT title FROM library.books WHERE id = %(id)s',
-            id=book_id,
-        ) == 'Преступление и наказание'
+        assert (
+            raw_db.scalar(
+                'SELECT title FROM library.books WHERE id = %(id)s',
+                id=book_id,
+            )
+            == 'Преступление и наказание'
+        )
         assert len(catalog_server.log) == 2
     finally:
         _delete_book(raw_db, isbn)
@@ -382,7 +412,9 @@ def test_register_reader_is_saved(client: testing.TestClient, raw_db: Any) -> No
     _delete_reader(raw_db, READER['email'])
     try:
         response = client.simulate_post(
-            '/library/readers', headers={'X-User': 'admin'}, json=READER
+            '/library/readers',
+            headers={'X-User': 'admin'},
+            json=READER,
         )
 
         assert response.status_code == 201
@@ -402,18 +434,22 @@ def test_register_reader_is_saved(client: testing.TestClient, raw_db: Any) -> No
             )
             == READER['tier']
         )
-        assert str(
-            raw_db.scalar(
-                'SELECT valid_until FROM library.readers WHERE id = %(id)s',
-                id=reader_id,
+        assert (
+            str(
+                raw_db.scalar(
+                    'SELECT valid_until FROM library.readers WHERE id = %(id)s',
+                    id=reader_id,
+                ),
             )
-        ) == READER['valid_until']
+            == READER['valid_until']
+        )
     finally:
         _delete_reader(raw_db, READER['email'])
 
 
 def test_membership_and_blocking_flow(
-    client: testing.TestClient, raw_db: Any
+    client: testing.TestClient,
+    raw_db: Any,
 ) -> None:
     email = 'reader-membership-e2e@example.com'
     _delete_reader(raw_db, email)
@@ -432,12 +468,15 @@ def test_membership_and_blocking_flow(
             json={'reader_id': reader_id, 'valid_until': '2028-06-30'},
         )
         assert extended.status_code == 200
-        assert str(
-            raw_db.scalar(
-                'SELECT valid_until FROM library.readers WHERE id = %(id)s',
-                id=reader_id,
+        assert (
+            str(
+                raw_db.scalar(
+                    'SELECT valid_until FROM library.readers WHERE id = %(id)s',
+                    id=reader_id,
+                ),
             )
-        ) == '2028-06-30'
+            == '2028-06-30'
+        )
         assert (
             raw_db.scalar(
                 'SELECT tier FROM library.readers WHERE id = %(id)s',
@@ -494,7 +533,8 @@ def test_membership_and_blocking_flow(
 
 
 def test_issue_loan_marks_copy_unavailable(
-    client: testing.TestClient, raw_db: Any
+    client: testing.TestClient,
+    raw_db: Any,
 ) -> None:
     isbn = '9785171183667'
     inventory_number = 'INV-E2E-LOAN-1'
@@ -505,7 +545,9 @@ def test_issue_loan_marks_copy_unavailable(
     reader_id: int | None = None
     try:
         book = client.simulate_post(
-            '/library/books', headers={'X-User': 'admin'}, json={**BOOK, 'isbn': isbn}
+            '/library/books',
+            headers={'X-User': 'admin'},
+            json={**BOOK, 'isbn': isbn},
         )
         assert book.status_code == 201
         book_id = book.json['id']
@@ -564,11 +606,13 @@ def test_issue_loan_marks_copy_unavailable(
     finally:
         if reader_id is not None:
             raw_db.execute(
-                'DELETE FROM library.readers WHERE id = %(id)s', id=reader_id
+                'DELETE FROM library.readers WHERE id = %(id)s',
+                id=reader_id,
             )
         if book_id is not None:
             raw_db.execute(
-                'DELETE FROM library.books WHERE id = %(id)s', id=book_id
+                'DELETE FROM library.books WHERE id = %(id)s',
+                id=book_id,
             )
 
 
@@ -579,7 +623,9 @@ def _create_loan_entities(
     email: str,
 ) -> tuple[int, int, int]:
     book = client.simulate_post(
-        '/library/books', headers={'X-User': 'admin'}, json={**BOOK, 'isbn': isbn}
+        '/library/books',
+        headers={'X-User': 'admin'},
+        json={**BOOK, 'isbn': isbn},
     )
     assert book.status_code == 201
     book_id: int = book.json['id']
@@ -607,7 +653,8 @@ def _create_loan_entities(
 
 
 def test_issue_loan_creates_notification(
-    client: testing.TestClient, raw_db: Any
+    client: testing.TestClient,
+    raw_db: Any,
 ) -> None:
     isbn = '9785171183669'
     email = 'reader-notification-e2e@example.com'
@@ -632,31 +679,35 @@ def test_issue_loan_creates_notification(
         assert issued.status_code == 201
         loan_id: int = issued.json['id']
         notification = raw_db.scalar(
-            'SELECT kind FROM library.notifications '
-            'WHERE loan_id = %(loan_id)s',
+            'SELECT kind FROM library.notifications WHERE loan_id = %(loan_id)s',
             loan_id=loan_id,
         )
         assert notification == 'loan_issued'
-        assert raw_db.scalar(
-            'SELECT reader_id FROM library.notifications '
-            'WHERE loan_id = %(loan_id)s',
-            loan_id=loan_id,
-        ) == reader_id
+        assert (
+            raw_db.scalar(
+                'SELECT reader_id FROM library.notifications '
+                'WHERE loan_id = %(loan_id)s',
+                loan_id=loan_id,
+            )
+            == reader_id
+        )
         assert str(
             raw_db.scalar(
                 'SELECT created_at FROM library.notifications '
                 'WHERE loan_id = %(loan_id)s',
                 loan_id=loan_id,
-            )
+            ),
         ) == str(date.today())
     finally:
         if reader_id is not None:
             raw_db.execute(
-                'DELETE FROM library.readers WHERE id = %(id)s', id=reader_id
+                'DELETE FROM library.readers WHERE id = %(id)s',
+                id=reader_id,
             )
         if book_id is not None:
             raw_db.execute(
-                'DELETE FROM library.books WHERE id = %(id)s', id=book_id
+                'DELETE FROM library.books WHERE id = %(id)s',
+                id=book_id,
             )
 
 
@@ -708,8 +759,7 @@ def test_loan_rolls_back_when_notification_fails(
         )
         assert (
             raw_db.scalar(
-                'SELECT count(*) FROM library.notifications '
-                'WHERE reader_id = %(id)s',
+                'SELECT count(*) FROM library.notifications WHERE reader_id = %(id)s',
                 id=reader_id,
             )
             == 0
@@ -717,16 +767,19 @@ def test_loan_rolls_back_when_notification_fails(
     finally:
         if reader_id is not None:
             raw_db.execute(
-                'DELETE FROM library.readers WHERE id = %(id)s', id=reader_id
+                'DELETE FROM library.readers WHERE id = %(id)s',
+                id=reader_id,
             )
         if book_id is not None:
             raw_db.execute(
-                'DELETE FROM library.books WHERE id = %(id)s', id=book_id
+                'DELETE FROM library.books WHERE id = %(id)s',
+                id=book_id,
             )
 
 
 def test_extend_and_return_loan_flow(
-    client: testing.TestClient, raw_db: Any
+    client: testing.TestClient,
+    raw_db: Any,
 ) -> None:
     isbn = '9785171183668'
     inventory_number = 'INV-E2E-LOAN-2'
@@ -784,8 +837,7 @@ def test_extend_and_return_loan_flow(
         ) == date.today() + timedelta(days=Loan.TERM_DAYS + 7)
         assert (
             raw_db.scalar(
-                'SELECT count(*) FROM library.loan_extensions '
-                'WHERE loan_id = %(id)s',
+                'SELECT count(*) FROM library.loan_extensions WHERE loan_id = %(id)s',
                 id=loan_id,
             )
             == 1
@@ -822,9 +874,11 @@ def test_extend_and_return_loan_flow(
     finally:
         if reader_id is not None:
             raw_db.execute(
-                'DELETE FROM library.readers WHERE id = %(id)s', id=reader_id
+                'DELETE FROM library.readers WHERE id = %(id)s',
+                id=reader_id,
             )
         if book_id is not None:
             raw_db.execute(
-                'DELETE FROM library.books WHERE id = %(id)s', id=book_id
+                'DELETE FROM library.books WHERE id = %(id)s',
+                id=book_id,
             )

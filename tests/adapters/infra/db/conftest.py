@@ -70,7 +70,8 @@ def db_find_books_gateway(db_engine: _DB_ENGINE) -> FindBooksGateway:
 
 @pytest.fixture
 def saved_book(
-    book_factory: Callable[..., Book], db_books_repo: BooksRepo
+    book_factory: Callable[..., Book],
+    db_books_repo: BooksRepo,
 ) -> Book:
     return db_books_repo.save(book_factory())
 

@@ -39,9 +39,9 @@ def create_app(
     loan_extensions: LoanExtensionsResource,
     returns: ReturnsResource,
 ) -> falcon.App[Any, Any]:
-    """Собрать HTTP-приложение: middleware, обработчики ошибок, маршруты"""
+    """Собрать HTTP-приложение: middleware, обработчики ошибок, маршруты."""
     app: falcon.App[Any, Any] = falcon.App(
-        middleware=[UserMiddleware(users=settings.USERS)]
+        middleware=[UserMiddleware(users=settings.USERS)],
     )
     app.add_error_handler(pydantic.ValidationError, serialize_validation_error)
     app.add_error_handler(AuthError, serialize_auth_error)

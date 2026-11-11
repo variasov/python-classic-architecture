@@ -76,6 +76,14 @@ ignore = [
     "RUF001",   # Cyrillic in strings is intended
     "RUF002",   # Cyrillic in docstrings is intended
     "RUF003",   # Cyrillic in comments is intended
+    "COM812",   # conflicts with the formatter, ruff's own recommendation
+    "DTZ011",   # spec: usecases take `date.today()` as the operation date
+    "S101",     # `assert x.id is not None` narrows Optional ids after save
+    "ARG002",   # falcon resource/middleware signatures require resp even when unused
+    "PLR2004",  # 13 (ISBN) and HTTP codes are domain constants inline
+    "PLR0913",  # create_app takes one resource per route by design
+    "PLR0917",  # same: explicit resources beat a magic dict
+    "PERF203",  # retry loop is small and must catch per attempt
 ]
 
 [tool.ruff.lint.flake8-quotes]
@@ -98,6 +106,17 @@ quote-style = "single"
     "ARG",      # unused fixture/helper args
     "CPY001",   # tests do not carry copyright headers
     "S608",     # SQL strings in tests are not injection vectors
+    "PLR0917",  # parametrized fixtures legitimately take many repo arguments
+    "PLC0415",  # composite imports must be deferred behind test fixtures/env
+    "B017",     # invalid-aggregate tests assert any failure on save
+]
+"src/library/composites/interfaces/api/wsgi.py" = [
+    "PLC0414",  # side-effect import registers the domain reaction per spec
+]
+"vulture_whitelist.py" = [
+    "B018",     # bare names ARE the vulture whitelist
+    "F821",     # whitelist entries reference names defined elsewhere
+    "E501",
 ]
 
 [tool.vulture]

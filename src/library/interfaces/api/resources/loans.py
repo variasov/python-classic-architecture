@@ -18,7 +18,7 @@ from library.interfaces.api.middleware import current_account
 
 @dataclass(frozen=True)
 class LoanCreated:
-    """Контракт ответа на выдачу экземпляра"""
+    """Контракт ответа на выдачу экземпляра."""
 
     id: int
 

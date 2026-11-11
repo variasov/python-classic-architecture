@@ -2,15 +2,15 @@ from collections.abc import Callable
 from datetime import date
 
 import pytest
+from classic.criteria import Criteria
 
 from library.app.commands.domain.book import (
     Book,
     BookIsbnInvalid,
+    BookNotFound,
     BookPublishedInFuture,
     BookTitleEmpty,
-    BookNotFound,
 )
-from classic.criteria import Criteria
 
 
 def test_valid_book_passes_check(book_factory: Callable[..., Book]) -> None:
@@ -56,7 +56,7 @@ def test_criteria_lazy_form(book_factory: Callable[..., Book]) -> None:
 def test_criteria_combinations(book_factory: Callable[..., Book]) -> None:
     book = book_factory(published_year=2000, authors=['Иван Бунин'])
     old_or_bunin = Book.published_after(year=1999) | Book.written_by(
-        author='Иван Бунин'
+        author='Иван Бунин',
     )
     both = Book.published_after(year=1999) & Book.written_by(author='Иван Бунин')
     not_bunin = ~Book.written_by(author='Иван Бунин')

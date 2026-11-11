@@ -13,7 +13,7 @@ from library.app.commands.domain.loan import (
 
 
 class DbLoansRepo(LoansRepo):
-    """Репозиторий выдач поверх PostgreSQL"""
+    """Репозиторий выдач поверх PostgreSQL."""
 
     def __init__(self, db: Engine[Any]) -> None:
         self._db = db
@@ -43,11 +43,11 @@ class DbLoansRepo(LoansRepo):
         params = self._params(loan)
         if loan.id is None:
             loan.id = self._db.query_from('aggregates/loans/insert.sql').scalar(
-                **params
+                **params,
             )
         else:
             updated = self._db.query_from('aggregates/loans/update.sql').scalar(
-                **params
+                **params,
             )
             if updated is None:
                 raise LoanNotFound(id=loan.id)
@@ -75,7 +75,7 @@ class DbLoansRepo(LoansRepo):
     def _sync_extensions(self, loan: Loan) -> None:
         assert loan.id is not None
         self._db.query_from('aggregates/loans/delete_extensions.sql').execute(
-            loan_id=loan.id
+            loan_id=loan.id,
         )
         rows = [
             {
@@ -87,7 +87,7 @@ class DbLoansRepo(LoansRepo):
             for position, extension in enumerate(loan.extensions)
         ]
         self._db.query_from('aggregates/loans/insert_extensions.sql').executemany(
-            rows
+            rows,
         )
 
     def _params(self, loan: Loan) -> dict[str, Any]:

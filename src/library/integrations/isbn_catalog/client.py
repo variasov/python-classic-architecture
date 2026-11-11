@@ -15,7 +15,7 @@ from library.integrations.isbn_catalog.settings import IsbnCatalogSettings
 
 @dataclass(frozen=True)
 class CatalogBookPayload:
-    """Контракт ответа внешнего каталога на запрос книги"""
+    """Контракт ответа внешнего каталога на запрос книги."""
 
     isbn: str
     title: str
@@ -24,11 +24,11 @@ class CatalogBookPayload:
 
 
 class IsbnCatalogUnavailable(Exception):
-    """Каталог ISBN недоступен или вернул неожиданный ответ"""
+    """Каталог ISBN недоступен или вернул неожиданный ответ."""
 
 
 class IsbnCatalogClient(IsbnCatalog):
-    """Клиент внешнего каталога ISBN поверх urllib3"""
+    """Клиент внешнего каталога ISBN поверх urllib3."""
 
     _payload_adapter: ClassVar = TypeAdapter(CatalogBookPayload)
 
@@ -41,23 +41,25 @@ class IsbnCatalogClient(IsbnCatalog):
         url = f'{base_url}/books?{urlencode({"isbn": isbn})}'
         try:
             response = self._http.request(
-                'GET', url, timeout=self._settings.ISBN_CATALOG_TIMEOUT
+                'GET',
+                url,
+                timeout=self._settings.ISBN_CATALOG_TIMEOUT,
             )
         except (urllib3.exceptions.HTTPError, OSError) as error:
             raise IsbnCatalogUnavailable(
-                f'Каталог ISBN недоступен: {error}'
+                f'Каталог ISBN недоступен: {error}',
             ) from error
         if response.status == 404:
             return None
         if response.status != 200:
             raise IsbnCatalogUnavailable(
-                f'Каталог ISBN вернул код {response.status}'
+                f'Каталог ISBN вернул код {response.status}',
             )
         try:
             payload = self._payload_adapter.validate_json(response.data)
         except pydantic.ValidationError as error:
             raise IsbnCatalogUnavailable(
-                'Каталог ISBN вернул некорректный ответ'
+                'Каталог ISBN вернул некорректный ответ',
             ) from error
         return CatalogBook(
             isbn=payload.isbn,

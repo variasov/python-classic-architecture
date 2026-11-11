@@ -16,9 +16,9 @@ from psycopg import sql
 
 from library.app.commands.domain.book import Book, BookNotFound, BooksRepo
 from library.app.commands.domain.copy import (
+    CopiesRepo,
     Copy,
     CopyNotFound,
-    CopiesRepo,
     ShelfLocation,
 )
 from library.app.commands.domain.loan import (
@@ -85,8 +85,8 @@ def _drop_schemas(settings: DBSettings) -> None:
             for schema in ('library', settings.MIGRATIONS_SCHEMA):
                 cursor.execute(
                     sql.SQL('DROP SCHEMA IF EXISTS {} CASCADE').format(
-                        sql.Identifier(schema)
-                    )
+                        sql.Identifier(schema),
+                    ),
                 )
         connection.commit()
 
@@ -311,7 +311,8 @@ def make_loan(**overrides: Any) -> Loan:
         'reader_id': 1,
         'copy_id': 1,
         'period': LoanPeriod(
-            start=TODAY, due=TODAY + timedelta(days=Loan.TERM_DAYS)
+            start=TODAY,
+            due=TODAY + timedelta(days=Loan.TERM_DAYS),
         ),
     }
     fields.update(overrides)

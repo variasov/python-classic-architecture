@@ -11,13 +11,15 @@ from library.app.queries.readers.find_readers import (
 
 
 class DbFindReadersGateway(FindReadersGateway):
-    """Список читателей из PostgreSQL"""
+    """Список читателей из PostgreSQL."""
 
     def __init__(self, db: Engine[Any]) -> None:
         self._db = db
 
     def run(
-        self, params: FindReadersParams, on: date
+        self,
+        params: FindReadersParams,
+        on: date,
     ) -> list[ReaderListItemDTO]:
         readers: list[ReaderListItemDTO] = (
             self._db.query_from('gateways/readers/find_readers.sql.tmpl')

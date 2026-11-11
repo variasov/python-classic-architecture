@@ -3,7 +3,7 @@ from collections.abc import Callable
 import pytest
 
 from library.app.commands.domain.book import Book, BooksRepo
-from library.app.commands.domain.copy import Copy, CopiesRepo
+from library.app.commands.domain.copy import CopiesRepo, Copy
 from library.app.queries.books.find_books import (
     BookListItemDTO,
     FindBooksGateway,
@@ -21,25 +21,31 @@ def seeded_books(
     books = {
         'Alpha': db_books_repo.save(
             book_factory(
-                title='Alpha', authors=['Ann'], published_year=1900
-            )
+                title='Alpha',
+                authors=['Ann'],
+                published_year=1900,
+            ),
         ),
         'Beta': db_books_repo.save(
             book_factory(
-                title='Beta', authors=['Bob'], published_year=1950
-            )
+                title='Beta',
+                authors=['Bob'],
+                published_year=1950,
+            ),
         ),
         'Gamma': db_books_repo.save(
             book_factory(
                 title='Gamma',
                 authors=['Ann', 'Bob'],
                 published_year=2000,
-            )
+            ),
         ),
         'Delta': db_books_repo.save(
             book_factory(
-                title='Delta', authors=['Dan'], published_year=2010
-            )
+                title='Delta',
+                authors=['Dan'],
+                published_year=2010,
+            ),
         ),
     }
     assert books['Alpha'].id is not None
@@ -47,28 +53,32 @@ def seeded_books(
     assert books['Delta'].id is not None
     available = db_copies_repo.save(
         copy_factory(
-            book_id=books['Alpha'].id, inventory_number='INV-FIND-1'
-        )
+            book_id=books['Alpha'].id,
+            inventory_number='INV-FIND-1',
+        ),
     )
     taken = db_copies_repo.save(
         copy_factory(
-            book_id=books['Alpha'].id, inventory_number='INV-FIND-2'
-        )
+            book_id=books['Alpha'].id,
+            inventory_number='INV-FIND-2',
+        ),
     )
     taken.take()
     db_copies_repo.save(taken)
     assert available.id is not None
     beta_copy = db_copies_repo.save(
         copy_factory(
-            book_id=books['Beta'].id, inventory_number='INV-FIND-3'
-        )
+            book_id=books['Beta'].id,
+            inventory_number='INV-FIND-3',
+        ),
     )
     beta_copy.take()
     db_copies_repo.save(beta_copy)
     db_copies_repo.save(
         copy_factory(
-            book_id=books['Delta'].id, inventory_number='INV-FIND-4'
-        )
+            book_id=books['Delta'].id,
+            inventory_number='INV-FIND-4',
+        ),
     )
     return books
 
@@ -91,7 +101,7 @@ def test_filters_by_title_substring_case_insensitively(
     seeded_books: dict[str, Book],
 ) -> None:
     found = db_find_books_gateway.run(
-        FindBooksParams(title__contains='AMM')
+        FindBooksParams(title__contains='AMM'),
     )
 
     assert _titles(found) == ['Gamma']
@@ -144,7 +154,7 @@ def test_combines_all_filters(
             only_available=True,
             year_from=1900,
             year_to=1950,
-        )
+        ),
     )
 
     assert _titles(found) == ['Alpha']
@@ -161,7 +171,7 @@ def test_combines_author_and_years_without_availability(
             only_available=False,
             year_from=1900,
             year_to=2000,
-        )
+        ),
     )
 
     assert _titles(found) == ['Beta']
@@ -172,7 +182,7 @@ def test_orders_by_published_year(
     seeded_books: dict[str, Book],
 ) -> None:
     found = db_find_books_gateway.run(
-        FindBooksParams(order_by='published_year')
+        FindBooksParams(order_by='published_year'),
     )
 
     assert _titles(found) == ['Alpha', 'Beta', 'Gamma', 'Delta']
@@ -195,7 +205,7 @@ def test_paginates(
     expected: list[str],
 ) -> None:
     found = db_find_books_gateway.run(
-        FindBooksParams(limit=limit, offset=offset)
+        FindBooksParams(limit=limit, offset=offset),
     )
 
     assert _titles(found) == expected
@@ -206,7 +216,7 @@ def test_empty_result(
     seeded_books: dict[str, Book],
 ) -> None:
     found = db_find_books_gateway.run(
-        FindBooksParams(title__contains='zzz')
+        FindBooksParams(title__contains='zzz'),
     )
 
     assert found == []

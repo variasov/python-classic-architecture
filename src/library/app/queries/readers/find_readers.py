@@ -6,7 +6,7 @@ from typing import ClassVar
 
 @dataclass(frozen=True)
 class FindReadersParams:
-    """Параметры списка читателей"""
+    """Параметры списка читателей."""
 
     MAX_LIMIT: ClassVar[int] = 100
 
@@ -22,7 +22,7 @@ class FindReadersParams:
 
 @dataclass(frozen=True)
 class ReaderListItemDTO:
-    """Читатель в списке с числом выдач на дату запроса"""
+    """Читатель в списке с числом выдач на дату запроса."""
 
     id: int
     full_name: str
@@ -32,16 +32,18 @@ class ReaderListItemDTO:
 
 
 class FindReadersGateway(ABC):
-    """Список читателей с числом активных и просроченных выдач"""
+    """Список читателей с числом активных и просроченных выдач."""
 
     @abstractmethod
     def run(
-        self, params: FindReadersParams, on: date
+        self,
+        params: FindReadersParams,
+        on: date,
     ) -> list[ReaderListItemDTO]: ...
 
 
 class FindReaders:
-    """Список читателей на текущую дату"""
+    """Список читателей на текущую дату."""
 
     def __init__(self, gateway: FindReadersGateway) -> None:
         self._gateway = gateway

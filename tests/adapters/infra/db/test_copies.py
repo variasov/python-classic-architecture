@@ -6,9 +6,9 @@ from classic.criteria import Criteria, ReturnsTrue
 
 from library.app.commands.domain.book import Book
 from library.app.commands.domain.copy import (
+    CopiesRepo,
     Copy,
     CopyNotFound,
-    CopiesRepo,
     InventoryNumberEmpty,
 )
 from library.infra.db.repos.books import DbBooksRepo
@@ -36,7 +36,8 @@ def copies_env(
 
 @pytest.fixture
 def seeded_copies(
-    copies_env: tuple[CopiesRepo, int, int], copy_factory: Callable[..., Copy]
+    copies_env: tuple[CopiesRepo, int, int],
+    copy_factory: Callable[..., Copy],
 ) -> list[Copy]:
     repo, book_id, other_book_id = copies_env
     return [
@@ -52,7 +53,8 @@ def _load(repo: CopiesRepo, copy: Copy) -> Copy:
 
 
 def test_saved_copy_is_read_back(
-    copies_env: tuple[CopiesRepo, int, int], copy_factory: Callable[..., Copy]
+    copies_env: tuple[CopiesRepo, int, int],
+    copy_factory: Callable[..., Copy],
 ) -> None:
     repo, book_id, _ = copies_env
     copy = repo.save(copy_factory(book_id=book_id))
@@ -63,7 +65,8 @@ def test_saved_copy_is_read_back(
 
 
 def test_update_changes_availability(
-    copies_env: tuple[CopiesRepo, int, int], copy_factory: Callable[..., Copy]
+    copies_env: tuple[CopiesRepo, int, int],
+    copy_factory: Callable[..., Copy],
 ) -> None:
     repo, book_id, _ = copies_env
     copy = repo.save(copy_factory(book_id=book_id))
@@ -81,7 +84,8 @@ def test_get_missing_copy_raises(copies_env: tuple[CopiesRepo, int, int]) -> Non
 
 
 def test_save_invalid_copy_writes_nothing(
-    copies_env: tuple[CopiesRepo, int, int], copy_factory: Callable[..., Copy]
+    copies_env: tuple[CopiesRepo, int, int],
+    copy_factory: Callable[..., Copy],
 ) -> None:
     repo, book_id, _ = copies_env
 
@@ -96,7 +100,7 @@ def _criteria_for_book(book_id: int, other_book_id: int) -> dict[str, Criteria[C
         'available': Copy.available(),
         'of_book': Copy.of_book(book_id=book_id),
         'with_inventory_number': Copy.with_inventory_number(
-            inventory_number='INV-2'
+            inventory_number='INV-2',
         ),
         'available_and_of_book': Copy.available() & Copy.of_book(book_id=book_id),
         'available_or_other_book': Copy.available()
@@ -131,7 +135,8 @@ def test_criteria_sql_matches_domain(
 
 
 def test_find_returns_all_without_filters(
-    copies_env: tuple[CopiesRepo, int, int], seeded_copies: list[Copy]
+    copies_env: tuple[CopiesRepo, int, int],
+    seeded_copies: list[Copy],
 ) -> None:
     repo, _, _ = copies_env
 

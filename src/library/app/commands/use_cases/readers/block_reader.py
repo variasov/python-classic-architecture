@@ -7,13 +7,13 @@ from library.app.roles import Account, Permissions
 
 @dataclass(frozen=True)
 class BlockReaderParams:
-    """Параметры блокировки читателя"""
+    """Параметры блокировки читателя."""
 
     reader_id: int
 
 
 class BlockReader:
-    """Блокировка читателя"""
+    """Блокировка читателя."""
 
     def __init__(self, readers: ReadersRepo, logger: logging.Logger) -> None:
         self._readers = readers

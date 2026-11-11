@@ -5,7 +5,10 @@ from datetime import date
 import pytest
 
 from library.app.commands.domain.book import BooksRepo
-from library.app.commands.use_cases.books.create_book import CreateBook, CreateBookParams
+from library.app.commands.use_cases.books.create_book import (
+    CreateBook,
+    CreateBookParams,
+)
 from library.app.commands.use_cases.books.create_book_from_catalog import (
     CatalogBook,
     CreateBookFromCatalog,
@@ -72,7 +75,9 @@ class FakeFindLoansGateway(FindLoansGateway):
         self.calls: list[tuple[FindLoansParams, date]] = []
 
     def run(
-        self, params: FindLoansParams, on: date
+        self,
+        params: FindLoansParams,
+        on: date,
     ) -> list[LoanListItemDTO]:
         self.calls.append((params, on))
         return self.loans
@@ -86,7 +91,9 @@ class FakeFindReadersGateway(FindReadersGateway):
         self.calls: list[tuple[FindReadersParams, date]] = []
 
     def run(
-        self, params: FindReadersParams, on: date
+        self,
+        params: FindReadersParams,
+        on: date,
     ) -> list[ReaderListItemDTO]:
         self.calls.append((params, on))
         return self.readers
@@ -119,10 +126,13 @@ def isbn_catalog() -> FakeIsbnCatalog:
 
 @pytest.fixture
 def create_book_from_catalog(
-    books_repo: BooksRepo, isbn_catalog: FakeIsbnCatalog
+    books_repo: BooksRepo,
+    isbn_catalog: FakeIsbnCatalog,
 ) -> CreateBookFromCatalog:
     return CreateBookFromCatalog(
-        books=books_repo, catalog=isbn_catalog, logger=logging.getLogger('test')
+        books=books_repo,
+        catalog=isbn_catalog,
+        logger=logging.getLogger('test'),
     )
 
 
@@ -156,7 +166,8 @@ def create_book_params() -> Callable[..., CreateBookParams]:
 
 @pytest.fixture
 def create_book_from_catalog_params() -> Callable[
-    ..., CreateBookFromCatalogParams
+    ...,
+    CreateBookFromCatalogParams,
 ]:
     def factory(**overrides: object) -> CreateBookFromCatalogParams:
         fields: dict[str, object] = {'isbn': '9785171183660'}

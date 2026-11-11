@@ -45,14 +45,16 @@ def no_loans_permission() -> Account:
 
 @pytest.fixture
 def loan(
-    loans_repo: LoansRepo, loan_factory: Callable[..., Loan]
+    loans_repo: LoansRepo,
+    loan_factory: Callable[..., Loan],
 ) -> Loan:
     return loans_repo.save(
         loan_factory(
             period=LoanPeriod(
-                start=TODAY, due=TODAY + timedelta(days=Loan.TERM_DAYS)
-            )
-        )
+                start=TODAY,
+                due=TODAY + timedelta(days=Loan.TERM_DAYS),
+            ),
+        ),
     )
 
 
@@ -68,7 +70,8 @@ def test_extends_loan_for_today(
     loan: Loan,
 ) -> None:
     extend_loan.run(
-        ExtendLoanParams(loan_id=_id(loan), days=7), loans_account
+        ExtendLoanParams(loan_id=_id(loan), days=7),
+        loans_account,
     )
 
     loaded = loans_repo.get_by_id(_id(loan))
@@ -80,7 +83,7 @@ def test_extends_loan_for_today(
         Extension(
             extended_at=TODAY,
             new_due=TODAY + timedelta(days=Loan.TERM_DAYS + 7),
-        )
+        ),
     ]
 
 
@@ -98,7 +101,7 @@ def test_two_extensions_keep_loan_valid(
     loaded = loans_repo.get_by_id(_id(loan))
     assert len(loaded.extensions) == 2
     assert loaded.period.due == TODAY + timedelta(
-        days=Loan.TERM_DAYS + 14
+        days=Loan.TERM_DAYS + 14,
     )
 
 
@@ -150,8 +153,8 @@ def test_overdue_loan_cannot_be_extended(
             period=LoanPeriod(
                 start=TODAY - timedelta(days=30),
                 due=TODAY - timedelta(days=1),
-            )
-        )
+            ),
+        ),
     )
 
     with pytest.raises(LoanOverdue):

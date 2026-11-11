@@ -4,15 +4,15 @@ from classic.criteria import Criteria
 from classic.db_tools import Assign, Engine, Entity, Value
 
 from library.app.commands.domain.copy import (
+    CopiesRepo,
     Copy,
     CopyNotFound,
-    CopiesRepo,
     ShelfLocation,
 )
 
 
 class DbCopiesRepo(CopiesRepo):
-    """Репозиторий экземпляров поверх PostgreSQL"""
+    """Репозиторий экземпляров поверх PostgreSQL."""
 
     def __init__(self, db: Engine[Any]) -> None:
         self._db = db
@@ -36,11 +36,11 @@ class DbCopiesRepo(CopiesRepo):
         params = self._params(copy)
         if copy.id is None:
             copy.id = self._db.query_from('aggregates/copies/insert.sql').scalar(
-                **params
+                **params,
             )
         else:
             updated = self._db.query_from('aggregates/copies/update.sql').scalar(
-                **params
+                **params,
             )
             if updated is None:
                 raise CopyNotFound(id=copy.id)

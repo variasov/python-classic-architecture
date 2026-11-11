@@ -11,13 +11,15 @@ from library.app.queries.loans.find_loans import (
 
 
 class DbFindLoansGateway(FindLoansGateway):
-    """Список выдач из PostgreSQL"""
+    """Список выдач из PostgreSQL."""
 
     def __init__(self, db: Engine[Any]) -> None:
         self._db = db
 
     def run(
-        self, params: FindLoansParams, on: date
+        self,
+        params: FindLoansParams,
+        on: date,
     ) -> list[LoanListItemDTO]:
         loans: list[LoanListItemDTO] = (
             self._db.query_from('gateways/loans/find_loans.sql.tmpl')

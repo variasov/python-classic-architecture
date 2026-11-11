@@ -5,7 +5,7 @@ from library.app.commands.domain.loan import LoansRepo
 
 
 class ReturnCopy:
-    """Возврат экземпляра: затрагивает выдачу и экземпляр"""
+    """Возврат экземпляра: затрагивает выдачу и экземпляр."""
 
     def __init__(self, loans: LoansRepo, copies: CopiesRepo) -> None:
         self._loans = loans

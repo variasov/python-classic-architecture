@@ -52,12 +52,13 @@ def no_readers_permission() -> Account:
 
 @pytest.fixture
 def saved_reader(
-    readers_repo: ReadersRepo, reader_factory: Callable[..., Reader]
+    readers_repo: ReadersRepo,
+    reader_factory: Callable[..., Reader],
 ) -> Reader:
     return readers_repo.save(
         reader_factory(
-            membership=Membership(tier='premium', valid_until=VALID_UNTIL)
-        )
+            membership=Membership(tier='premium', valid_until=VALID_UNTIL),
+        ),
     )
 
 
@@ -74,14 +75,16 @@ def test_extends_membership(
     extend_membership_params: Callable[..., ExtendMembershipParams],
 ) -> None:
     params = extend_membership_params(
-        reader_id=saved_reader.id, valid_until=NEW_VALID_UNTIL
+        reader_id=saved_reader.id,
+        valid_until=NEW_VALID_UNTIL,
     )
 
     extend_membership.run(params, admin)
 
     saved = _load(readers_repo, saved_reader)
     assert saved.membership == Membership(
-        tier='premium', valid_until=NEW_VALID_UNTIL
+        tier='premium',
+        valid_until=NEW_VALID_UNTIL,
     )
     assert saved.is_blocked is False
 
@@ -108,7 +111,8 @@ def test_same_date_is_rejected(
     extend_membership_params: Callable[..., ExtendMembershipParams],
 ) -> None:
     params = extend_membership_params(
-        reader_id=saved_reader.id, valid_until=VALID_UNTIL
+        reader_id=saved_reader.id,
+        valid_until=VALID_UNTIL,
     )
 
     with pytest.raises(MembershipNotExtended):
@@ -126,7 +130,8 @@ def test_earlier_date_is_rejected(
     extend_membership_params: Callable[..., ExtendMembershipParams],
 ) -> None:
     params = extend_membership_params(
-        reader_id=saved_reader.id, valid_until=date(2026, 1, 1)
+        reader_id=saved_reader.id,
+        valid_until=date(2026, 1, 1),
     )
 
     with pytest.raises(MembershipNotExtended):
@@ -144,7 +149,8 @@ def test_requires_permission_before_storage(
     extend_membership_params: Callable[..., ExtendMembershipParams],
 ) -> None:
     params = extend_membership_params(
-        reader_id=987654, valid_until=NEW_VALID_UNTIL
+        reader_id=987654,
+        valid_until=NEW_VALID_UNTIL,
     )
 
     with pytest.raises(PermissionDenied):

@@ -12,7 +12,7 @@ from library.app.commands.domain.notification import (
 
 
 class NotifyOnLoanIssued:
-    """Реакция на выдачу: сохраняет уведомление читателю"""
+    """Реакция на выдачу: сохраняет уведомление читателю."""
 
     def __init__(
         self,

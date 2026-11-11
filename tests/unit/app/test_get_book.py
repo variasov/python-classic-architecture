@@ -22,7 +22,7 @@ def test_returns_card_from_gateway(
         copies=[
             book_copy_factory(id=10, inventory_number='INV-10'),
             book_copy_factory(id=11, inventory_number='INV-11'),
-        ]
+        ],
     )
     get_book_gateway.card = card
 
@@ -42,7 +42,8 @@ def test_passes_params_to_gateway(
 
 
 def test_missing_book_raises(
-    get_book: GetBook, get_book_gateway: Any
+    get_book: GetBook,
+    get_book_gateway: Any,
 ) -> None:
     get_book_gateway.card = None
 

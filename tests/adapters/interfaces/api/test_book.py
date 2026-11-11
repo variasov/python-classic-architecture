@@ -18,13 +18,14 @@ CARD = {
             'rack': 2,
             'shelf': 3,
             'is_available': True,
-        }
+        },
     ],
 }
 
 
 def test_book_card_returns_200(
-    client: testing.TestClient, get_book_fake: Any
+    client: testing.TestClient,
+    get_book_fake: Any,
 ) -> None:
     response = client.simulate_get('/library/book', params={'id': '1'})
 
@@ -34,7 +35,8 @@ def test_book_card_returns_200(
 
 
 def test_book_card_requires_id(
-    client: testing.TestClient, get_book_fake: Any
+    client: testing.TestClient,
+    get_book_fake: Any,
 ) -> None:
     response = client.simulate_get('/library/book')
 
@@ -43,7 +45,8 @@ def test_book_card_requires_id(
 
 
 def test_missing_book_is_422(
-    client: testing.TestClient, get_book_fake: Any
+    client: testing.TestClient,
+    get_book_fake: Any,
 ) -> None:
     get_book_fake.error = GetBookNotFound(id=404)
 

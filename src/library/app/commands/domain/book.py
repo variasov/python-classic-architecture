@@ -38,7 +38,7 @@ class BookNotFound(DomainError):
 
 @dataclass
 class Book:
-    """Корень агрегата: книга"""
+    """Корень агрегата: книга."""
 
     isbn: str
     title: str
@@ -50,7 +50,7 @@ class Book:
         if len(self.isbn) != 13 or not self.isbn.isdigit():
             raise BookIsbnInvalid(isbn=self.isbn)
         if not self.title.strip():
-            raise BookTitleEmpty()
+            raise BookTitleEmpty
         if self.published_year > date.today().year:
             raise BookPublishedInFuture(year=self.published_year)
 

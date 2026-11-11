@@ -10,7 +10,7 @@ from library.app.queries.books.find_books import (
 
 
 class DbFindBooksGateway(FindBooksGateway):
-    """Поиск книг в PostgreSQL"""
+    """Поиск книг в PostgreSQL."""
 
     SORT_COLUMNS: ClassVar[dict[str, str]] = {
         'title': 'title',

@@ -4,7 +4,7 @@ from collections.abc import Callable
 import pytest
 
 from library.app.commands.domain.book import Book, BookNotFound, BooksRepo
-from library.app.commands.domain.copy import Copy, CopiesRepo
+from library.app.commands.domain.copy import CopiesRepo, Copy
 from library.app.commands.use_cases.books.add_copy import (
     AddCopy,
     AddCopyParams,
@@ -37,7 +37,9 @@ def books_with_one(books_repo: BooksRepo, book_factory: Callable[..., Book]) -> 
 @pytest.fixture
 def add_copy(books_repo: BooksRepo, copies_repo: CopiesRepo) -> AddCopy:
     return AddCopy(
-        books=books_repo, copies=copies_repo, logger=logging.getLogger('test')
+        books=books_repo,
+        copies=copies_repo,
+        logger=logging.getLogger('test'),
     )
 
 
@@ -55,7 +57,8 @@ def test_adds_copy(
 ) -> None:
     assert books_with_one.id is not None
     copy_id = add_copy.run(
-        add_copy_params(book_id=books_with_one.id), admin
+        add_copy_params(book_id=books_with_one.id),
+        admin,
     )
 
     saved = copies_repo.get_by_id(copy_id)
@@ -96,7 +99,8 @@ def test_requires_permission(
     assert books_with_one.id is not None
     with pytest.raises(PermissionDenied):
         add_copy.run(
-            add_copy_params(book_id=books_with_one.id), no_books_permission
+            add_copy_params(book_id=books_with_one.id),
+            no_books_permission,
         )
 
     assert copies_repo.find(Copy.available()) == []

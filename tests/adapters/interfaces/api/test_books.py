@@ -24,7 +24,8 @@ def test_create_book_returns_201_and_id(client: testing.TestClient) -> None:
 
 
 def test_request_body_is_parsed_into_params(
-    client: testing.TestClient, create_book_fake: Any
+    client: testing.TestClient,
+    create_book_fake: Any,
 ) -> None:
     client.simulate_post(
         '/library/books',
@@ -58,7 +59,8 @@ def test_invalid_body_is_400(client: testing.TestClient) -> None:
 
 
 def test_permission_denied_is_403(
-    client: testing.TestClient, create_book_fake: Any
+    client: testing.TestClient,
+    create_book_fake: Any,
 ) -> None:
     create_book_fake.error = PermissionDenied(login='guest', permission='books.edit')
 
@@ -77,7 +79,8 @@ def test_permission_denied_is_403(
 
 
 def test_find_books_returns_200_and_list(
-    client: testing.TestClient, find_books_fake: Any
+    client: testing.TestClient,
+    find_books_fake: Any,
 ) -> None:
     response = client.simulate_get(
         '/library/books',
@@ -99,7 +102,7 @@ def test_find_books_returns_200_and_list(
             'authors': ['Лев Толстой'],
             'published_year': 1869,
             'available_copies': 2,
-        }
+        },
     ]
     assert find_books_fake.calls == [
         FindBooksParams(
@@ -108,12 +111,13 @@ def test_find_books_returns_200_and_list(
             order_by='published_year',
             limit=5,
             offset=10,
-        )
+        ),
     ]
 
 
 def test_find_books_uses_default_params(
-    client: testing.TestClient, find_books_fake: Any
+    client: testing.TestClient,
+    find_books_fake: Any,
 ) -> None:
     client.simulate_get('/library/books')
 
@@ -121,7 +125,8 @@ def test_find_books_uses_default_params(
 
 
 def test_find_books_invalid_limit_is_400(
-    client: testing.TestClient, find_books_fake: Any
+    client: testing.TestClient,
+    find_books_fake: Any,
 ) -> None:
     response = client.simulate_get('/library/books', params={'limit': '0'})
 
@@ -130,10 +135,12 @@ def test_find_books_invalid_limit_is_400(
 
 
 def test_find_books_short_search_is_400(
-    client: testing.TestClient, find_books_fake: Any
+    client: testing.TestClient,
+    find_books_fake: Any,
 ) -> None:
     response = client.simulate_get(
-        '/library/books', params={'title__contains': 'ab'}
+        '/library/books',
+        params={'title__contains': 'ab'},
     )
 
     assert response.status_code == 400
@@ -141,10 +148,12 @@ def test_find_books_short_search_is_400(
 
 
 def test_find_books_unknown_order_is_400(
-    client: testing.TestClient, find_books_fake: Any
+    client: testing.TestClient,
+    find_books_fake: Any,
 ) -> None:
     response = client.simulate_get(
-        '/library/books', params={'order_by': 'author'}
+        '/library/books',
+        params={'order_by': 'author'},
     )
 
     assert response.status_code == 400

@@ -3,7 +3,8 @@ from datetime import date, timedelta
 
 import pytest
 from classic.criteria import Criteria
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
 from library.app.commands.domain.reader import (
     Contact,
@@ -14,8 +15,8 @@ from library.app.commands.domain.reader import (
     Reader,
     ReaderAlreadyBlocked,
     ReaderNameEmpty,
-    ReaderNotFound,
     ReaderNotBlocked,
+    ReaderNotFound,
 )
 
 TODAY = date(2026, 3, 10)
@@ -125,11 +126,11 @@ def test_membership_active_on_instance(
     reader_factory: Callable[..., Reader],
 ) -> None:
     assert _reader(reader_factory, valid_until=TOMORROW).membership_active(
-        on=TODAY
+        on=TODAY,
     )
     assert _reader(reader_factory, valid_until=TODAY).membership_active(on=TODAY)
     assert not _reader(reader_factory, valid_until=YESTERDAY).membership_active(
-        on=TODAY
+        on=TODAY,
     )
 
 
@@ -167,20 +168,29 @@ def test_criteria_lazy_form(reader_factory: Callable[..., Reader]) -> None:
     assert Reader.has_tier(tier='premium').is_satisfied_by(reader) is True
     assert Reader.has_tier(tier='basic').is_satisfied_by(reader) is False
     assert Reader.not_blocked().is_satisfied_by(reader) is True
-    assert Reader.not_blocked().is_satisfied_by(
-        _reader(reader_factory, is_blocked=True)
-    ) is False
+    assert (
+        Reader.not_blocked().is_satisfied_by(
+            _reader(reader_factory, is_blocked=True),
+        )
+        is False
+    )
 
 
 def test_criteria_combinations(reader_factory: Callable[..., Reader]) -> None:
     active_premium = _reader(
-        reader_factory, tier='premium', valid_until=TOMORROW
+        reader_factory,
+        tier='premium',
+        valid_until=TOMORROW,
     )
     expired_basic = _reader(
-        reader_factory, tier='basic', valid_until=YESTERDAY
+        reader_factory,
+        tier='basic',
+        valid_until=YESTERDAY,
     )
     blocked_premium = _reader(
-        reader_factory, tier='premium', is_blocked=True
+        reader_factory,
+        tier='premium',
+        is_blocked=True,
     )
 
     can_borrow = (
@@ -189,7 +199,7 @@ def test_criteria_combinations(reader_factory: Callable[..., Reader]) -> None:
         & Reader.has_tier(tier='premium')
     )
     active_or_premium = Reader.membership_active(on=TODAY) | Reader.has_tier(
-        tier='premium'
+        tier='premium',
     )
     expired = ~Reader.membership_active(on=TODAY)
 
@@ -269,7 +279,8 @@ def test_extend_membership_to_earlier_date_is_rejected(
     st.integers(min_value=-30, max_value=30),
 )
 def test_extend_membership_accepts_only_later_dates(
-    valid_until: date, delta_days: int
+    valid_until: date,
+    delta_days: int,
 ) -> None:
     reader = Reader(
         full_name='Иван Петров',

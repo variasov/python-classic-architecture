@@ -9,7 +9,7 @@ from library.app.commands.domain.errors import DomainError
 
 
 class NotificationKind(Enum):
-    """Вид уведомления читателю"""
+    """Вид уведомления читателю."""
 
     loan_issued = 'loan_issued'
     loan_overdue = 'loan_overdue'
@@ -25,7 +25,7 @@ class NotificationNotFound(DomainError):
 
 @dataclass
 class Notification:
-    """Корень агрегата: уведомление для читателя"""
+    """Корень агрегата: уведомление для читателя."""
 
     reader_id: int
     loan_id: int

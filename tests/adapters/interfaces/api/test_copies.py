@@ -19,7 +19,9 @@ COPY: dict[str, Any] = {
 
 def test_add_copy_returns_201_and_id(client: testing.TestClient) -> None:
     response = client.simulate_post(
-        '/library/copies', headers={'X-User': 'admin'}, json=COPY
+        '/library/copies',
+        headers={'X-User': 'admin'},
+        json=COPY,
     )
 
     assert response.status_code == 201
@@ -27,10 +29,13 @@ def test_add_copy_returns_201_and_id(client: testing.TestClient) -> None:
 
 
 def test_request_body_is_parsed_into_params(
-    client: testing.TestClient, create_copies_fake: Any
+    client: testing.TestClient,
+    create_copies_fake: Any,
 ) -> None:
     client.simulate_post(
-        '/library/copies', headers={'X-User': 'admin'}, json=COPY
+        '/library/copies',
+        headers={'X-User': 'admin'},
+        json=COPY,
     )
 
     params, account = create_copies_fake.calls[0]
@@ -58,19 +63,24 @@ def test_missing_field_is_400(client: testing.TestClient) -> None:
     body = {key: value for key, value in COPY.items() if key != 'inventory_number'}
 
     response = client.simulate_post(
-        '/library/copies', headers={'X-User': 'admin'}, json=body
+        '/library/copies',
+        headers={'X-User': 'admin'},
+        json=body,
     )
 
     assert response.status_code == 400
 
 
 def test_inventory_number_taken_is_422(
-    client: testing.TestClient, create_copies_fake: Any
+    client: testing.TestClient,
+    create_copies_fake: Any,
 ) -> None:
     create_copies_fake.error = InventoryNumberTaken(inventory_number='INV-001')
 
     response = client.simulate_post(
-        '/library/copies', headers={'X-User': 'admin'}, json=COPY
+        '/library/copies',
+        headers={'X-User': 'admin'},
+        json=COPY,
     )
 
     assert response.status_code == 422
@@ -80,14 +90,18 @@ def test_inventory_number_taken_is_422(
 
 
 def test_permission_denied_is_403(
-    client: testing.TestClient, create_copies_fake: Any
+    client: testing.TestClient,
+    create_copies_fake: Any,
 ) -> None:
     create_copies_fake.error = PermissionDenied(
-        login='guest', permission='books.edit'
+        login='guest',
+        permission='books.edit',
     )
 
     response = client.simulate_post(
-        '/library/copies', headers={'X-User': 'guest'}, json=COPY
+        '/library/copies',
+        headers={'X-User': 'guest'},
+        json=COPY,
     )
 
     assert response.status_code == 403

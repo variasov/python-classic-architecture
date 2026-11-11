@@ -24,9 +24,7 @@ class LoanLimitReached(DomainError):
     limit: int
 
     def __str__(self) -> str:
-        return (
-            f'Читатель с id={self.reader_id} достиг лимита выдач: {self.limit}'
-        )
+        return f'Читатель с id={self.reader_id} достиг лимита выдач: {self.limit}'
 
 
 @dataclass
@@ -38,7 +36,7 @@ class ReaderHasOverdueLoans(DomainError):
 
 
 class BorrowCopy:
-    """Выдача экземпляра читателю: затрагивает читателя, экземпляр и выдачу"""
+    """Выдача экземпляра читателю: затрагивает читателя, экземпляр и выдачу."""
 
     def __init__(
         self,
@@ -62,14 +60,14 @@ class BorrowCopy:
             raise ReaderCannotBorrow(reader_id=reader.id)
 
         active_loans = self._loans.find(
-            Loan.of_reader(reader_id=reader.id) & ~Loan.returned()
+            Loan.of_reader(reader_id=reader.id) & ~Loan.returned(),
         )
         limit = reader.membership.loan_limit
         if len(active_loans) >= limit:
             raise LoanLimitReached(reader_id=reader.id, limit=limit)
 
         overdue_loans = self._loans.find(
-            Loan.of_reader(reader_id=reader.id) & Loan.overdue(on=on)
+            Loan.of_reader(reader_id=reader.id) & Loan.overdue(on=on),
         )
         if overdue_loans:
             raise ReaderHasOverdueLoans(reader_id=reader.id)
@@ -81,7 +79,8 @@ class BorrowCopy:
             reader_id=reader.id,
             copy_id=copy.id,
             period=LoanPeriod(
-                start=on, due=on + timedelta(days=Loan.TERM_DAYS)
+                start=on,
+                due=on + timedelta(days=Loan.TERM_DAYS),
             ),
         )
         self._loans.save(loan)

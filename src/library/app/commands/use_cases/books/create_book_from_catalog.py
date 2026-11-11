@@ -9,7 +9,7 @@ from library.app.roles import Account, Permissions
 
 @dataclass(frozen=True)
 class CatalogBook:
-    """Книга, найденная во внешнем каталоге ISBN"""
+    """Книга, найденная во внешнем каталоге ISBN."""
 
     isbn: str
     title: str
@@ -18,7 +18,7 @@ class CatalogBook:
 
 
 class IsbnCatalog(ABC):
-    """Внешний каталог книг по ISBN"""
+    """Внешний каталог книг по ISBN."""
 
     @abstractmethod
     def find(self, isbn: str) -> CatalogBook | None: ...
@@ -26,7 +26,7 @@ class IsbnCatalog(ABC):
 
 @dataclass(frozen=True)
 class CreateBookFromCatalogParams:
-    """Параметры создания книги из каталога"""
+    """Параметры создания книги из каталога."""
 
     isbn: str
 
@@ -44,10 +44,13 @@ class BookNotInCatalog(AppError):
 
 
 class CreateBookFromCatalog:
-    """Создание книги по описанию из внешнего каталога ISBN"""
+    """Создание книги по описанию из внешнего каталога ISBN."""
 
     def __init__(
-        self, books: BooksRepo, catalog: IsbnCatalog, logger: logging.Logger
+        self,
+        books: BooksRepo,
+        catalog: IsbnCatalog,
+        logger: logging.Logger,
     ) -> None:
         self._books = books
         self._catalog = catalog

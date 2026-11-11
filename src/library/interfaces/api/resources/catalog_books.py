@@ -13,7 +13,7 @@ from library.interfaces.api.middleware import current_account
 
 @dataclass(frozen=True)
 class CatalogBookCreated:
-    """Контракт ответа на создание книги из каталога"""
+    """Контракт ответа на создание книги из каталога."""
 
     id: int
 
@@ -28,10 +28,11 @@ class CatalogBooksResource:
     def on_post(self, req: falcon.Request, resp: falcon.Response) -> None:
         params = self._create_validator.validate_json(req.bounded_stream.read())
         book_id = self._create_book_from_catalog.run(
-            params, current_account(req)
+            params,
+            current_account(req),
         )
         resp.status = falcon.HTTP_201
         resp.content_type = falcon.MEDIA_JSON
         resp.data = self._created_serializer.dump_json(
-            CatalogBookCreated(id=book_id)
+            CatalogBookCreated(id=book_id),
         )

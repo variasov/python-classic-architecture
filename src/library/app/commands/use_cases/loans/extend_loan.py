@@ -9,7 +9,7 @@ from library.app.roles import Account, Permissions
 
 @dataclass(frozen=True)
 class ExtendLoanParams:
-    """Параметры продления выдачи"""
+    """Параметры продления выдачи."""
 
     MAX_DAYS: ClassVar[int] = 30
 
@@ -22,7 +22,7 @@ class ExtendLoanParams:
 
 
 class ExtendLoan:
-    """Продление выдачи"""
+    """Продление выдачи."""
 
     def __init__(self, loans: LoansRepo, logger: logging.Logger) -> None:
         self._loans = loans

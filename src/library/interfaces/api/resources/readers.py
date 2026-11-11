@@ -18,7 +18,7 @@ from library.interfaces.api.middleware import current_account
 
 @dataclass(frozen=True)
 class ReaderCreated:
-    """Контракт ответа на регистрацию читателя"""
+    """Контракт ответа на регистрацию читателя."""
 
     id: int
 
@@ -30,7 +30,9 @@ class ReadersResource:
     _created_serializer: ClassVar = TypeAdapter(ReaderCreated)
 
     def __init__(
-        self, find_readers: FindReaders, register_reader: RegisterReader
+        self,
+        find_readers: FindReaders,
+        register_reader: RegisterReader,
     ) -> None:
         self._find_readers = find_readers
         self._register_reader = register_reader

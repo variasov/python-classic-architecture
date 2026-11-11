@@ -21,7 +21,8 @@ def test_creates_book_from_catalog(
     isbn_catalog: Any,
     admin: Account,
     create_book_from_catalog_params: Callable[
-        ..., CreateBookFromCatalogParams
+        ...,
+        CreateBookFromCatalogParams,
     ],
 ) -> None:
     isbn_catalog.books[ISBN] = CatalogBook(
@@ -32,7 +33,8 @@ def test_creates_book_from_catalog(
     )
 
     book_id = create_book_from_catalog.run(
-        create_book_from_catalog_params(isbn=ISBN), admin
+        create_book_from_catalog_params(isbn=ISBN),
+        admin,
     )
 
     saved = books_repo.get_by_id(book_id)
@@ -47,12 +49,14 @@ def test_unknown_isbn_is_reported(
     books_repo: BooksRepo,
     admin: Account,
     create_book_from_catalog_params: Callable[
-        ..., CreateBookFromCatalogParams
+        ...,
+        CreateBookFromCatalogParams,
     ],
 ) -> None:
     with pytest.raises(BookNotInCatalog):
         create_book_from_catalog.run(
-            create_book_from_catalog_params(isbn=ISBN), admin
+            create_book_from_catalog_params(isbn=ISBN),
+            admin,
         )
 
     assert books_repo.find(Book.written_by('Лев Толстой')) == []
@@ -64,7 +68,8 @@ def test_requires_permission(
     isbn_catalog: Any,
     no_books_permission: Account,
     create_book_from_catalog_params: Callable[
-        ..., CreateBookFromCatalogParams
+        ...,
+        CreateBookFromCatalogParams,
     ],
 ) -> None:
     isbn_catalog.books[ISBN] = CatalogBook(
@@ -76,7 +81,8 @@ def test_requires_permission(
 
     with pytest.raises(PermissionDenied):
         create_book_from_catalog.run(
-            create_book_from_catalog_params(isbn=ISBN), no_books_permission
+            create_book_from_catalog_params(isbn=ISBN),
+            no_books_permission,
         )
 
     assert books_repo.find(Book.written_by('Лев Толстой')) == []
@@ -84,7 +90,8 @@ def test_requires_permission(
 
 def test_params_require_isbn_length(
     create_book_from_catalog_params: Callable[
-        ..., CreateBookFromCatalogParams
+        ...,
+        CreateBookFromCatalogParams,
     ],
 ) -> None:
     with pytest.raises(ValueError):

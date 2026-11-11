@@ -8,13 +8,13 @@ from library.app.roles import Account, Permissions
 
 @dataclass(frozen=True)
 class ReturnLoanParams:
-    """Параметры возврата экземпляра"""
+    """Параметры возврата экземпляра."""
 
     loan_id: int
 
 
 class ReturnLoan:
-    """Возврат экземпляра по выдаче"""
+    """Возврат экземпляра по выдаче."""
 
     def __init__(self, return_copy: ReturnCopy, logger: logging.Logger) -> None:
         self._return_copy = return_copy

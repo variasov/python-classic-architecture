@@ -19,8 +19,7 @@ def _notification(
     created_at: date,
     id: int,
 ) -> Notification:
-    """Собирает уведомление, переводя вид из текста в перечисление"""
-
+    """Собирает уведомление, переводя вид из текста в перечисление."""
     return Notification(
         reader_id=reader_id,
         loan_id=loan_id,
@@ -31,7 +30,7 @@ def _notification(
 
 
 class DbNotificationsRepo(NotificationsRepo):
-    """Репозиторий уведомлений поверх PostgreSQL"""
+    """Репозиторий уведомлений поверх PostgreSQL."""
 
     def __init__(self, db: Engine[Any]) -> None:
         self._db = db
@@ -51,11 +50,11 @@ class DbNotificationsRepo(NotificationsRepo):
         params = self._params(notification)
         if notification.id is None:
             notification.id = self._db.query_from(
-                'aggregates/notifications/insert.sql'
+                'aggregates/notifications/insert.sql',
             ).scalar(**params)
         else:
             updated = self._db.query_from(
-                'aggregates/notifications/update.sql'
+                'aggregates/notifications/update.sql',
             ).scalar(**params)
             if updated is None:
                 raise NotificationNotFound(id=notification.id)

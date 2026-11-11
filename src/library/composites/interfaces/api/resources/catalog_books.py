@@ -4,5 +4,5 @@ from library.composites.app.commands.create_book_from_catalog import (
 from library.interfaces.api.resources.catalog_books import CatalogBooksResource
 
 catalog_books = CatalogBooksResource(
-    create_book_from_catalog=create_book_from_catalog
+    create_book_from_catalog=create_book_from_catalog,
 )

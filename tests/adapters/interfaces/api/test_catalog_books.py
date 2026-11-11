@@ -23,7 +23,8 @@ def test_create_book_returns_201_and_id(client: testing.TestClient) -> None:
 
 
 def test_request_body_is_parsed_into_params(
-    client: testing.TestClient, create_catalog_book_fake: Any
+    client: testing.TestClient,
+    create_catalog_book_fake: Any,
 ) -> None:
     client.simulate_post(
         '/library/catalog_books',
@@ -37,7 +38,8 @@ def test_request_body_is_parsed_into_params(
 
 
 def test_short_isbn_is_400(
-    client: testing.TestClient, create_catalog_book_fake: Any
+    client: testing.TestClient,
+    create_catalog_book_fake: Any,
 ) -> None:
     response = client.simulate_post(
         '/library/catalog_books',
@@ -50,10 +52,13 @@ def test_short_isbn_is_400(
 
 
 def test_missing_isbn_is_400(
-    client: testing.TestClient, create_catalog_book_fake: Any
+    client: testing.TestClient,
+    create_catalog_book_fake: Any,
 ) -> None:
     response = client.simulate_post(
-        '/library/catalog_books', headers={'X-User': 'admin'}, json={}
+        '/library/catalog_books',
+        headers={'X-User': 'admin'},
+        json={},
     )
 
     assert response.status_code == 400
@@ -61,7 +66,8 @@ def test_missing_isbn_is_400(
 
 
 def test_book_not_in_catalog_is_422(
-    client: testing.TestClient, create_catalog_book_fake: Any
+    client: testing.TestClient,
+    create_catalog_book_fake: Any,
 ) -> None:
     create_catalog_book_fake.error = BookNotInCatalog(isbn=ISBN)
 
@@ -78,10 +84,12 @@ def test_book_not_in_catalog_is_422(
 
 
 def test_permission_denied_is_403(
-    client: testing.TestClient, create_catalog_book_fake: Any
+    client: testing.TestClient,
+    create_catalog_book_fake: Any,
 ) -> None:
     create_catalog_book_fake.error = PermissionDenied(
-        login='guest', permission='books.edit'
+        login='guest',
+        permission='books.edit',
     )
 
     response = client.simulate_post(

@@ -6,5 +6,5 @@ from library.integrations.isbn_catalog.client import IsbnCatalogClient
 
 isbn_catalog_client = IsbnCatalogClient(settings=isbn_catalog_settings)
 isbn_catalog_client.find = retry_on_failure(  # pyright: ignore[reportAttributeAccessIssue]
-    isbn_catalog_client.find
+    isbn_catalog_client.find,
 )

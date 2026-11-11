@@ -13,7 +13,7 @@ from library.app.roles import Account, Permissions
 
 @dataclass(frozen=True)
 class RegisterReaderParams:
-    """Параметры регистрации читателя"""
+    """Параметры регистрации читателя."""
 
     full_name: str
     email: str
@@ -23,7 +23,7 @@ class RegisterReaderParams:
 
 
 class RegisterReader:
-    """Регистрация читателя"""
+    """Регистрация читателя."""
 
     def __init__(self, readers: ReadersRepo, logger: logging.Logger) -> None:
         self._readers = readers

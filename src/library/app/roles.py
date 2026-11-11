@@ -1,11 +1,12 @@
+from collections.abc import Collection
 from dataclasses import dataclass
-from typing import ClassVar, Collection
+from typing import ClassVar
 
 from library.app.errors import AuthError
 
 
 class Permissions:
-    """Права, которые проверяют usecase-команды"""
+    """Права, которые проверяют usecase-команды."""
 
     BOOKS_EDIT: ClassVar[str] = 'books.edit'
     READERS_EDIT: ClassVar[str] = 'readers.edit'
@@ -14,7 +15,7 @@ class Permissions:
 
 @dataclass(frozen=True)
 class Account:
-    """Пользователь, от имени которого выполняется действие"""
+    """Пользователь, от имени которого выполняется действие."""
 
     login: str
     permissions: Collection[str]

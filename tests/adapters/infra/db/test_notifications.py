@@ -47,17 +47,18 @@ def notifications_env(
         assert reader.id is not None
         assert book.id is not None
         copy = copies.save(
-            copy_factory(book_id=book.id, inventory_number=f'INV-{uuid4().hex}')
+            copy_factory(book_id=book.id, inventory_number=f'INV-{uuid4().hex}'),
         )
         assert copy.id is not None
         period = LoanPeriod(
-            start=TODAY, due=TODAY + timedelta(days=Loan.TERM_DAYS)
+            start=TODAY,
+            due=TODAY + timedelta(days=Loan.TERM_DAYS),
         )
         loan = loans.save(
-            loan_factory(reader_id=reader.id, copy_id=copy.id, period=period)
+            loan_factory(reader_id=reader.id, copy_id=copy.id, period=period),
         )
         other_loan = loans.save(
-            loan_factory(reader_id=reader.id, copy_id=copy.id, period=period)
+            loan_factory(reader_id=reader.id, copy_id=copy.id, period=period),
         )
         assert loan.id is not None
         assert other_loan.id is not None
@@ -67,14 +68,16 @@ def notifications_env(
             (loan.id, other_loan.id),
         )
         raw_db.execute(
-            'DELETE FROM library.readers WHERE id = %(id)s', id=reader.id
+            'DELETE FROM library.readers WHERE id = %(id)s',
+            id=reader.id,
         )
         raw_db.execute(
-            'DELETE FROM library.books WHERE id = %(id)s', id=book.id
+            'DELETE FROM library.books WHERE id = %(id)s',
+            id=book.id,
         )
         return
     in_memory: NotificationsRepo = request.getfixturevalue(
-        'in_memory_notifications_repo'
+        'in_memory_notifications_repo',
     )
     yield in_memory, 1, (1, 2)
 
@@ -94,7 +97,7 @@ def test_saved_notification_is_read_back(
             reader_id=reader_id,
             loan_id=loan_id,
             kind=NotificationKind.loan_issued,
-        )
+        ),
     )
 
     loaded = _load(repo, notification)
@@ -110,7 +113,7 @@ def test_update_changes_kind_and_date(
 ) -> None:
     repo, reader_id, (loan_id, _) = notifications_env
     notification = repo.save(
-        notification_factory(reader_id=reader_id, loan_id=loan_id)
+        notification_factory(reader_id=reader_id, loan_id=loan_id),
     )
     notification.kind = NotificationKind.loan_overdue
     notification.created_at = TOMORROW
@@ -143,7 +146,7 @@ def seeded_notifications(
                 reader_id=reader_id,
                 loan_id=loan_id,
                 kind=NotificationKind.loan_issued,
-            )
+            ),
         ),
         repo.save(
             notification_factory(
@@ -151,14 +154,14 @@ def seeded_notifications(
                 loan_id=loan_id,
                 kind=NotificationKind.loan_overdue,
                 created_at=TOMORROW,
-            )
+            ),
         ),
         repo.save(
             notification_factory(
                 reader_id=reader_id,
                 loan_id=other_loan_id,
                 kind=NotificationKind.loan_issued,
-            )
+            ),
         ),
         repo.save(
             notification_factory(
@@ -166,13 +169,14 @@ def seeded_notifications(
                 loan_id=other_loan_id,
                 kind=NotificationKind.loan_overdue,
                 created_at=TOMORROW,
-            )
+            ),
         ),
     ]
 
 
 def _criteria_map(
-    loan_id: int, other_loan_id: int
+    loan_id: int,
+    other_loan_id: int,
 ) -> dict[str, Criteria[Notification]]:
     return {
         'about_loan': Notification.about_loan(loan_id=loan_id),

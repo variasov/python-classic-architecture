@@ -3,7 +3,8 @@ from datetime import date, timedelta
 
 import pytest
 from classic.criteria import Criteria
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
 from library.app.commands.domain.loan import (
     Extension,
@@ -42,7 +43,8 @@ def test_period_due_must_be_after_start() -> None:
     st.integers(min_value=-400, max_value=400),
 )
 def test_period_check_accepts_exactly_forward_due(
-    start: date, offset: int
+    start: date,
+    offset: int,
 ) -> None:
     due = start + timedelta(days=offset)
     period = LoanPeriod(start=start, due=due)
@@ -65,7 +67,7 @@ def test_two_extensions_pass_check(loan_factory: Callable[..., Loan]) -> None:
                 extended_at=TODAY + timedelta(days=21),
                 new_due=TODAY + timedelta(days=28),
             ),
-        ]
+        ],
     )
 
     loan.check()
@@ -85,7 +87,7 @@ def test_more_than_two_extensions_are_rejected(
                 extended_at=NEXT_WEEK + timedelta(days=7),
                 new_due=NEXT_WEEK + timedelta(days=14),
             ),
-        ]
+        ],
     )
 
     with pytest.raises(TooManyExtensions):
@@ -97,10 +99,11 @@ def test_more_than_two_extensions_are_rejected(
     [TODAY + timedelta(days=Loan.TERM_DAYS), TODAY],
 )
 def test_extension_must_move_due_strictly_forward(
-    loan_factory: Callable[..., Loan], new_due: date
+    loan_factory: Callable[..., Loan],
+    new_due: date,
 ) -> None:
     loan = loan_factory(
-        extensions=[Extension(extended_at=TOMORROW, new_due=new_due)]
+        extensions=[Extension(extended_at=TOMORROW, new_due=new_due)],
     )
 
     with pytest.raises(ExtensionNotForward):
@@ -131,7 +134,8 @@ def test_returned_at_cannot_be_before_start(
 
 @pytest.mark.parametrize('returned_at', [TODAY, TOMORROW])
 def test_returned_at_not_before_start_is_allowed(
-    loan_factory: Callable[..., Loan], returned_at: date
+    loan_factory: Callable[..., Loan],
+    returned_at: date,
 ) -> None:
     loan_factory(returned_at=returned_at).check()
 
@@ -140,7 +144,8 @@ def test_overdue_on_instance(loan_factory: Callable[..., Loan]) -> None:
     assert loan_factory(period=LoanPeriod(TODAY, YESTERDAY)).overdue(on=TODAY)
     assert not loan_factory(period=LoanPeriod(TODAY, TODAY)).overdue(on=TODAY)
     assert not loan_factory(
-        period=LoanPeriod(TODAY, YESTERDAY), returned_at=TODAY
+        period=LoanPeriod(TODAY, YESTERDAY),
+        returned_at=TODAY,
     ).overdue(on=TODAY)
 
 
@@ -268,7 +273,7 @@ def test_extend_moves_due_and_adds_extension(
 
     assert loan.period == LoanPeriod(start=TODAY, due=initial_due + timedelta(days=7))
     assert loan.extensions == [
-        Extension(extended_at=TOMORROW, new_due=initial_due + timedelta(days=7))
+        Extension(extended_at=TOMORROW, new_due=initial_due + timedelta(days=7)),
     ]
     loan.check()
 
@@ -326,8 +331,9 @@ def test_loan_due_today_can_be_extended(
 ) -> None:
     loan = loan_factory(
         period=LoanPeriod(
-            start=TODAY - timedelta(days=Loan.TERM_DAYS), due=TODAY
-        )
+            start=TODAY - timedelta(days=Loan.TERM_DAYS),
+            due=TODAY,
+        ),
     )
 
     loan.extend(on=TODAY, days=7)

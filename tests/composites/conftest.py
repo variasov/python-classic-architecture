@@ -17,7 +17,8 @@ def catalog_server() -> Iterator[HTTPServer]:
 
 @pytest.fixture(scope='session')
 def test_env(
-    migrated_db: object, catalog_server: HTTPServer
+    migrated_db: object,
+    catalog_server: HTTPServer,
 ) -> Iterator[None]:
     """Настройки API пришли из окружения, адрес каталога даёт stub-сервер"""
     with pytest.MonkeyPatch.context() as env:

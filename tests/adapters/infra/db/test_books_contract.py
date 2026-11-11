@@ -11,7 +11,8 @@ def _load(repo: BooksRepo, book: Book) -> Book:
 
 
 def test_saved_book_is_read_back(
-    any_books_repo: BooksRepo, book_factory: Callable[..., Book]
+    any_books_repo: BooksRepo,
+    book_factory: Callable[..., Book],
 ) -> None:
     book = any_books_repo.save(book_factory())
 
@@ -21,10 +22,11 @@ def test_saved_book_is_read_back(
 
 
 def test_authors_keep_their_order(
-    any_books_repo: BooksRepo, book_factory: Callable[..., Book]
+    any_books_repo: BooksRepo,
+    book_factory: Callable[..., Book],
 ) -> None:
     book = any_books_repo.save(
-        book_factory(authors=['Первый', 'Второй', 'Третий'])
+        book_factory(authors=['Первый', 'Второй', 'Третий']),
     )
 
     loaded = _load(any_books_repo, book)
@@ -33,7 +35,8 @@ def test_authors_keep_their_order(
 
 
 def test_update_replaces_authors(
-    any_books_repo: BooksRepo, book_factory: Callable[..., Book]
+    any_books_repo: BooksRepo,
+    book_factory: Callable[..., Book],
 ) -> None:
     book = any_books_repo.save(book_factory())
     book.title = 'Анна Каренина'
@@ -52,7 +55,8 @@ def test_get_missing_book_raises(any_books_repo: BooksRepo) -> None:
 
 
 def test_save_invalid_book_writes_nothing(
-    any_books_repo: BooksRepo, book_factory: Callable[..., Book]
+    any_books_repo: BooksRepo,
+    book_factory: Callable[..., Book],
 ) -> None:
     with pytest.raises(Exception):
         any_books_repo.save(book_factory(isbn='bad'))

@@ -46,7 +46,7 @@ class CopyNotFound(DomainError):
 
 @dataclass(frozen=True)
 class ShelfLocation:
-    """Объект-значение: место хранения экземпляра"""
+    """Объект-значение: место хранения экземпляра."""
 
     hall: str
     rack: int
@@ -59,7 +59,7 @@ class ShelfLocation:
 
 @dataclass
 class Copy:
-    """Корень агрегата: экземпляр книги"""
+    """Корень агрегата: экземпляр книги."""
 
     book_id: int
     inventory_number: str
@@ -69,7 +69,7 @@ class Copy:
 
     def check(self) -> None:
         if not self.inventory_number.strip():
-            raise InventoryNumberEmpty()
+            raise InventoryNumberEmpty
         self.shelf.check()
 
     def take(self) -> None:

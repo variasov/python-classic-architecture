@@ -10,8 +10,10 @@ from library.composites.integrations.isbn_catalog.client import isbn_catalog_cli
 logger = logging.getLogger('library')
 
 create_book_from_catalog = CreateBookFromCatalog(
-    books=books_repo, catalog=isbn_catalog_client, logger=logger
+    books=books_repo,
+    catalog=isbn_catalog_client,
+    logger=logger,
 )
 create_book_from_catalog.run = engine.transaction(  # pyright: ignore[reportAttributeAccessIssue]
-    create_book_from_catalog.run
+    create_book_from_catalog.run,
 )

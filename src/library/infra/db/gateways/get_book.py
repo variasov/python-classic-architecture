@@ -11,7 +11,7 @@ from library.app.queries.books.get_book import (
 
 
 class DbGetBookGateway(GetBookGateway):
-    """Карточка книги из PostgreSQL"""
+    """Карточка книги из PostgreSQL."""
 
     def __init__(self, db: Engine[Any]) -> None:
         self._db = db

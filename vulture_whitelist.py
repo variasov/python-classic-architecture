@@ -1,4 +1,5 @@
 _loan_issued_subscriber
+cls
 db_scope
 migrated_db
 test_env

@@ -44,7 +44,8 @@ def no_readers_permission() -> Account:
 
 @pytest.fixture
 def saved_reader(
-    readers_repo: ReadersRepo, reader_factory: Callable[..., Reader]
+    readers_repo: ReadersRepo,
+    reader_factory: Callable[..., Reader],
 ) -> Reader:
     return readers_repo.save(reader_factory())
 
@@ -102,7 +103,8 @@ def test_requires_permission_before_storage(
 ) -> None:
     with pytest.raises(PermissionDenied):
         block_reader.run(
-            block_reader_params(reader_id=987654), no_readers_permission
+            block_reader_params(reader_id=987654),
+            no_readers_permission,
         )
 
     assert _load(readers_repo, saved_reader).is_blocked is False

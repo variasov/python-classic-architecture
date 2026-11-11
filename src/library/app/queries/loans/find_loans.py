@@ -6,7 +6,7 @@ from typing import ClassVar
 
 @dataclass(frozen=True)
 class FindLoansParams:
-    """Параметры списка выдач"""
+    """Параметры списка выдач."""
 
     MAX_LIMIT: ClassVar[int] = 100
 
@@ -25,7 +25,7 @@ class FindLoansParams:
 
 @dataclass(frozen=True)
 class LoanListItemDTO:
-    """Выдача в списке"""
+    """Выдача в списке."""
 
     id: int
     reader_id: int
@@ -37,16 +37,18 @@ class LoanListItemDTO:
 
 
 class FindLoansGateway(ABC):
-    """Список выдач с фильтрами на дату запроса"""
+    """Список выдач с фильтрами на дату запроса."""
 
     @abstractmethod
     def run(
-        self, params: FindLoansParams, on: date
+        self,
+        params: FindLoansParams,
+        on: date,
     ) -> list[LoanListItemDTO]: ...
 
 
 class FindLoans:
-    """Список выдач на текущую дату"""
+    """Список выдач на текущую дату."""
 
     def __init__(self, gateway: FindLoansGateway) -> None:
         self._gateway = gateway

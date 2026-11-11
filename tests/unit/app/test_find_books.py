@@ -25,7 +25,8 @@ def test_returns_books_from_gateway(
 
 
 def test_passes_params_to_gateway(
-    find_books: FindBooks, find_books_gateway: Any
+    find_books: FindBooks,
+    find_books_gateway: Any,
 ) -> None:
     params = FindBooksParams(title__contains='война', limit=5, offset=10)
 
@@ -87,7 +88,8 @@ def test_params_reject_short_search(search: str) -> None:
     [(None, None), (1900, None), (None, 2000), (2000, 2000), (1900, 2000)],
 )
 def test_params_accept_consistent_years(
-    year_from: int | None, year_to: int | None
+    year_from: int | None,
+    year_to: int | None,
 ) -> None:
     params = FindBooksParams(year_from=year_from, year_to=year_to)
 

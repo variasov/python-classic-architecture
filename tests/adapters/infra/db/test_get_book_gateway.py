@@ -1,7 +1,7 @@
 from collections.abc import Callable
 
 from library.app.commands.domain.book import Book, BooksRepo
-from library.app.commands.domain.copy import Copy, CopiesRepo, ShelfLocation
+from library.app.commands.domain.copy import CopiesRepo, Copy, ShelfLocation
 from library.app.queries.books.get_book import GetBookGateway, GetBookParams
 
 
@@ -13,7 +13,7 @@ def test_card_contains_book_and_copies(
     copy_factory: Callable[..., Copy],
 ) -> None:
     book = db_books_repo.save(
-        book_factory(authors=['Лев Толстой', 'Второй автор'])
+        book_factory(authors=['Лев Толстой', 'Второй автор']),
     )
     assert book.id is not None
     first = db_copies_repo.save(
@@ -21,14 +21,14 @@ def test_card_contains_book_and_copies(
             book_id=book.id,
             inventory_number='INV-CARD-1',
             shelf=ShelfLocation(hall='Читальный зал', rack=2, shelf=5),
-        )
+        ),
     )
     second = db_copies_repo.save(
         copy_factory(
             book_id=book.id,
             inventory_number='INV-CARD-2',
             shelf=ShelfLocation(hall='Абонемент', rack=1, shelf=3),
-        )
+        ),
     )
     second.take()
     db_copies_repo.save(second)

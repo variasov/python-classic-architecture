@@ -10,7 +10,7 @@ from library.interfaces.api.middleware import current_account
 
 @dataclass(frozen=True)
 class CopyCreated:
-    """Контракт ответа на создание экземпляра"""
+    """Контракт ответа на создание экземпляра."""
 
     id: int
 

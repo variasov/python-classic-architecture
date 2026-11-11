@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class DBSettings(BaseSettings):
-    """Настройки подключения к PostgreSQL"""
+    """Настройки подключения к PostgreSQL."""
 
     DB_HOST: str
     DB_PORT: int
@@ -15,7 +15,7 @@ class DBSettings(BaseSettings):
 
     @property
     def DB_CONN_INFO(self) -> str:
-        """Строка подключения psycopg"""
+        """Строка подключения psycopg."""
         return (
             f'host={_quote_value(self.DB_HOST)} '
             f'port={self.DB_PORT} '

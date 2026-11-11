@@ -67,7 +67,7 @@ class LoanNotFound(DomainError):
 
 @dataclass(frozen=True)
 class LoanPeriod:
-    """Объект-значение: срок выдачи"""
+    """Объект-значение: срок выдачи."""
 
     start: date
     due: date
@@ -79,7 +79,7 @@ class LoanPeriod:
 
 @dataclass(frozen=True)
 class Extension:
-    """Объект-значение: продление выдачи"""
+    """Объект-значение: продление выдачи."""
 
     extended_at: date
     new_due: date
@@ -87,7 +87,7 @@ class Extension:
 
 @dataclass
 class Loan:
-    """Корень агрегата: выдача экземпляра читателю"""
+    """Корень агрегата: выдача экземпляра читателю."""
 
     TERM_DAYS: ClassVar[int] = 14
     MAX_EXTENSIONS: ClassVar[int] = 2
@@ -135,9 +135,8 @@ class Loan:
 
     @criteria
     def due_within(self, on: date, days: int) -> bool:
-        return (
-            self.returned_at is None
-            and on <= self.period.due <= on + timedelta(days=days)
+        return self.returned_at is None and on <= self.period.due <= on + timedelta(
+            days=days
         )
 
     @criteria

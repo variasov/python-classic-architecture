@@ -2,7 +2,8 @@ from collections.abc import Callable
 
 import pytest
 from classic.criteria import Criteria
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
 from library.app.commands.domain.copy import (
     Copy,

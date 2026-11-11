@@ -8,7 +8,7 @@ from pydantic import TypeAdapter
 
 @dataclass(frozen=True)
 class ErrorDetail:
-    """Контракт тела ответа с ошибкой"""
+    """Контракт тела ответа с ошибкой."""
 
     type: str
     msg: str
@@ -19,7 +19,9 @@ _errors_serializer = TypeAdapter(list[ErrorDetail])
 
 
 def _respond(
-    resp: falcon.Response, status: str, details: list[ErrorDetail]
+    resp: falcon.Response,
+    status: str,
+    details: list[ErrorDetail],
 ) -> None:
     resp.status = status
     resp.content_type = falcon.MEDIA_JSON

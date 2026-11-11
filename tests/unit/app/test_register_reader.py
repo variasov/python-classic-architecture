@@ -62,7 +62,8 @@ def test_registers_reader(
     saved = readers_repo.get_by_id(reader_id)
     assert saved.full_name == 'Иван Петров'
     assert saved.contact == Contact(
-        email='ivan@example.com', phone='+7 900 000-00-00'
+        email='ivan@example.com',
+        phone='+7 900 000-00-00',
     )
     assert saved.membership == Membership(tier='premium', valid_until=VALID_UNTIL)
     assert saved.is_blocked is False
@@ -99,7 +100,8 @@ def test_domain_invariants_are_not_skipped(
 ) -> None:
     with pytest.raises(ContactEmailInvalid):
         register_reader.run(
-            register_reader_params(email='ivan.example.com'), admin
+            register_reader_params(email='ivan.example.com'),
+            admin,
         )
 
     assert readers_repo.find(ReturnsTrue()) == []
@@ -109,7 +111,10 @@ def test_params_accept_values_without_extra_checks(
     register_reader_params: Callable[..., RegisterReaderParams],
 ) -> None:
     params = register_reader_params(
-        full_name='', email='not-an-email', phone=None, tier='unknown'
+        full_name='',
+        email='not-an-email',
+        phone=None,
+        tier='unknown',
     )
 
     assert params.full_name == ''

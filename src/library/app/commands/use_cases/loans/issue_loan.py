@@ -8,14 +8,14 @@ from library.app.roles import Account, Permissions
 
 @dataclass(frozen=True)
 class IssueLoanParams:
-    """Параметры выдачи экземпляра читателю"""
+    """Параметры выдачи экземпляра читателю."""
 
     reader_id: int
     copy_id: int
 
 
 class IssueLoan:
-    """Выдача экземпляра читателю"""
+    """Выдача экземпляра читателю."""
 
     def __init__(self, borrow_copy: BorrowCopy, logger: logging.Logger) -> None:
         self._borrow_copy = borrow_copy

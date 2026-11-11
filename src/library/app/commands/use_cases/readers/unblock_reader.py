@@ -7,13 +7,13 @@ from library.app.roles import Account, Permissions
 
 @dataclass(frozen=True)
 class UnblockReaderParams:
-    """Параметры разблокировки читателя"""
+    """Параметры разблокировки читателя."""
 
     reader_id: int
 
 
 class UnblockReader:
-    """Разблокировка читателя"""
+    """Разблокировка читателя."""
 
     def __init__(self, readers: ReadersRepo, logger: logging.Logger) -> None:
         self._readers = readers
@@ -25,5 +25,6 @@ class UnblockReader:
         reader.unblock()
         self._readers.save(reader)
         self._logger.info(
-            'Читатель разблокирован: reader_id=%s', params.reader_id
+            'Читатель разблокирован: reader_id=%s',
+            params.reader_id,
         )

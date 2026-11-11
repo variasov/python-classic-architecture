@@ -9,17 +9,18 @@ from library.infra.db.repos.books import DbBooksRepo
 
 @pytest.fixture
 def seeded_books(
-    db_books_repo: DbBooksRepo, book_factory: Callable[..., Book]
+    db_books_repo: DbBooksRepo,
+    book_factory: Callable[..., Book],
 ) -> list[Book]:
     return [
         db_books_repo.save(
-            book_factory(title='Ранняя', published_year=1900, authors=['Первый'])
+            book_factory(title='Ранняя', published_year=1900, authors=['Первый']),
         ),
         db_books_repo.save(
-            book_factory(title='Средняя', published_year=1950, authors=['Второй'])
+            book_factory(title='Средняя', published_year=1950, authors=['Второй']),
         ),
         db_books_repo.save(
-            book_factory(title='Поздняя', published_year=2000, authors=['Первый'])
+            book_factory(title='Поздняя', published_year=2000, authors=['Первый']),
         ),
     ]
 
@@ -46,6 +47,7 @@ def test_criteria_sql_matches_domain(
 
 
 def test_find_returns_all_without_filters(
-    db_books_repo: BooksRepo, seeded_books: list[Book]
+    db_books_repo: BooksRepo,
+    seeded_books: list[Book],
 ) -> None:
     assert len(db_books_repo.find(ReturnsTrue())) == 3
