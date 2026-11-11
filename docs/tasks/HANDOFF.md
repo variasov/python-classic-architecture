@@ -122,3 +122,26 @@
 - Корневой `tests/conftest.py`: `InMemoryReadersRepo`, `reader_factory` (по умолчанию
   `Membership('basic', TOMORROW)`).
 - Состояние: `pytest 224 passed`, `pyright 0 errors`. ruff/vulture не запускались (их нет в `.venv-wsl`).
+
+### 06. Абонемент и блокировка читателя (выполнено)
+- Домен `domain/reader.py`: `Reader.extend_membership(until)` (граница `until == valid_until` - ошибка,
+  membership заменяется через `dataclasses.replace`), `block()`, `unblock()`; ошибки
+  `MembershipNotExtended(reader_id, until)`, `ReaderAlreadyBlocked(reader_id)`, `ReaderNotBlocked(reader_id)` -
+  датаклассы `DomainError` с `__str__`.
+- `reader_id` в новых ошибках - `int | None`, как `copy_id` в `CopyNotAvailable`: агрегат может быть ещё
+  не сохранён, когда поведение бросает ошибку.
+- App: `use_cases/readers/{extend_membership,block_reader,unblock_reader}.py` - `Params`, право
+  `readers.edit` первой строкой `run`, `get_by_id`, поведение, `save`, логгер в конструкторе.
+- HTTP: `MembershipsResource.on_put` (`PUT /library/memberships`, тело `ExtendMembershipParams`);
+  `ReaderBlocksResource.on_post` (`POST /library/reader_blocks`, тело `BlockReaderParams`) и `on_delete`
+  (`DELETE /library/reader_blocks?reader_id=`, query через `validate_python`). Действия отдают 200,
+  тело не пишется. `create_app` принимает `memberships` и `reader_blocks` последними аргументами;
+  обновлены `wsgi.py`, композитные инстансы ресурсов и `tests/adapters/interfaces/api/conftest.py`.
+- Композит: `composites/app/commands/{extend_membership,block_reader,unblock_reader}.py` с
+  `engine.transaction` на `run`; инстансы ресурсов в `composites/interfaces/api/resources/`.
+- Тесты: домен (успех, tier сохраняется, граница и более ранняя дата, повторная блокировка/разблокировка,
+  hypothesis по датам, `__str__`); команды (успех и состояние репозитория, `ReaderNotFound`, доменные
+  ошибки, права до обращения к хранилищу); HTTP (200, 400 на тело и query, 403, 422 с `ctx`); e2e
+  регистрация -> продление -> блокировка -> повторная блокировка 422 -> разблокировка -> повторная
+  разблокировка 422, очистка `DELETE FROM library.readers` по email.
+- Состояние: `pytest 273 passed`, `pyright 0 errors`. ruff/vulture не запускались (их нет в `.venv-wsl`).

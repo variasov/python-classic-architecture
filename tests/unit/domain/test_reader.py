@@ -9,10 +9,13 @@ from library.app.commands.domain.reader import (
     Contact,
     ContactEmailInvalid,
     Membership,
+    MembershipNotExtended,
     MembershipTierInvalid,
     Reader,
+    ReaderAlreadyBlocked,
     ReaderNameEmpty,
     ReaderNotFound,
+    ReaderNotBlocked,
 )
 
 TODAY = date(2026, 3, 10)
@@ -201,3 +204,139 @@ def test_criteria_combinations(reader_factory: Callable[..., Reader]) -> None:
 
 def test_reader_not_found_message_uses_id() -> None:
     assert '7' in str(ReaderNotFound(id=7))
+
+
+def test_extend_membership_moves_valid_until(
+    reader_factory: Callable[..., Reader],
+) -> None:
+    reader = _reader(reader_factory)
+    new_until = date(2027, 1, 31)
+
+    reader.extend_membership(until=new_until)
+
+    assert reader.membership == Membership(tier='basic', valid_until=new_until)
+
+
+def test_extend_membership_keeps_tier(
+    reader_factory: Callable[..., Reader],
+) -> None:
+    reader = _reader(reader_factory, tier='premium')
+
+    reader.extend_membership(until=date(2027, 1, 31))
+
+    assert reader.membership.tier == 'premium'
+    assert reader.membership.loan_limit == 10
+
+
+def test_extend_membership_replaces_membership_value(
+    reader_factory: Callable[..., Reader],
+) -> None:
+    reader = _reader(reader_factory)
+    previous = reader.membership
+
+    reader.extend_membership(until=date(2027, 1, 31))
+
+    assert reader.membership is not previous
+    assert previous.valid_until == TOMORROW
+
+
+def test_extend_membership_to_same_date_is_rejected(
+    reader_factory: Callable[..., Reader],
+) -> None:
+    reader = _reader(reader_factory, valid_until=TOMORROW)
+
+    with pytest.raises(MembershipNotExtended) as error:
+        reader.extend_membership(until=TOMORROW)
+
+    assert error.value.reader_id == reader.id
+    assert error.value.until == TOMORROW
+    assert reader.membership.valid_until == TOMORROW
+
+
+def test_extend_membership_to_earlier_date_is_rejected(
+    reader_factory: Callable[..., Reader],
+) -> None:
+    reader = _reader(reader_factory, valid_until=TOMORROW)
+
+    with pytest.raises(MembershipNotExtended):
+        reader.extend_membership(until=YESTERDAY)
+
+    assert reader.membership.valid_until == TOMORROW
+
+
+@given(
+    st.dates(min_value=date(2000, 1, 1), max_value=date(2030, 12, 31)),
+    st.integers(min_value=-30, max_value=30),
+)
+def test_extend_membership_accepts_only_later_dates(
+    valid_until: date, delta_days: int
+) -> None:
+    reader = Reader(
+        full_name='Иван Петров',
+        contact=Contact(email='reader@example.com'),
+        membership=Membership(tier='basic', valid_until=valid_until),
+    )
+    until = valid_until + timedelta(days=delta_days)
+
+    if until > valid_until:
+        reader.extend_membership(until=until)
+        assert reader.membership.valid_until == until
+    else:
+        with pytest.raises(MembershipNotExtended):
+            reader.extend_membership(until=until)
+
+
+def test_membership_not_extended_message_uses_fields() -> None:
+    error = MembershipNotExtended(reader_id=7, until=TOMORROW)
+
+    assert '7' in str(error)
+    assert str(TOMORROW) in str(error)
+
+
+def test_block_sets_flag(reader_factory: Callable[..., Reader]) -> None:
+    reader = _reader(reader_factory)
+
+    reader.block()
+
+    assert reader.is_blocked is True
+    assert not reader.not_blocked()
+
+
+def test_block_twice_is_rejected(reader_factory: Callable[..., Reader]) -> None:
+    reader = _reader(reader_factory)
+    reader.block()
+
+    with pytest.raises(ReaderAlreadyBlocked) as error:
+        reader.block()
+
+    assert error.value.reader_id == reader.id
+    assert reader.is_blocked is True
+
+
+def test_already_blocked_message_uses_id() -> None:
+    assert '7' in str(ReaderAlreadyBlocked(reader_id=7))
+
+
+def test_unblock_clears_flag(reader_factory: Callable[..., Reader]) -> None:
+    reader = _reader(reader_factory, is_blocked=True)
+
+    reader.unblock()
+
+    assert reader.is_blocked is False
+    assert reader.not_blocked()
+
+
+def test_unblock_not_blocked_is_rejected(
+    reader_factory: Callable[..., Reader],
+) -> None:
+    reader = _reader(reader_factory)
+
+    with pytest.raises(ReaderNotBlocked) as error:
+        reader.unblock()
+
+    assert error.value.reader_id == reader.id
+    assert reader.is_blocked is False
+
+
+def test_not_blocked_message_uses_id() -> None:
+    assert '7' in str(ReaderNotBlocked(reader_id=7))

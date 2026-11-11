@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from typing import ClassVar
 
@@ -35,6 +35,34 @@ class ReaderNotFound(DomainError):
 
     def __str__(self) -> str:
         return f'Читатель с id={self.id} не найден'
+
+
+@dataclass
+class MembershipNotExtended(DomainError):
+    reader_id: int | None
+    until: date
+
+    def __str__(self) -> str:
+        return (
+            f'Абонемент читателя с id={self.reader_id} не продлён: '
+            f'новая дата {self.until} не позже текущей'
+        )
+
+
+@dataclass
+class ReaderAlreadyBlocked(DomainError):
+    reader_id: int | None
+
+    def __str__(self) -> str:
+        return f'Читатель с id={self.reader_id} уже заблокирован'
+
+
+@dataclass
+class ReaderNotBlocked(DomainError):
+    reader_id: int | None
+
+    def __str__(self) -> str:
+        return f'Читатель с id={self.reader_id} не заблокирован'
 
 
 @dataclass(frozen=True)
@@ -82,6 +110,21 @@ class Reader:
             raise ReaderNameEmpty()
         self.contact.check()
         self.membership.check()
+
+    def extend_membership(self, until: date) -> None:
+        if until <= self.membership.valid_until:
+            raise MembershipNotExtended(reader_id=self.id, until=until)
+        self.membership = replace(self.membership, valid_until=until)
+
+    def block(self) -> None:
+        if self.is_blocked:
+            raise ReaderAlreadyBlocked(reader_id=self.id)
+        self.is_blocked = True
+
+    def unblock(self) -> None:
+        if not self.is_blocked:
+            raise ReaderNotBlocked(reader_id=self.id)
+        self.is_blocked = False
 
     @criteria
     def membership_active(self, on: date) -> bool:

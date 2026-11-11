@@ -17,6 +17,8 @@ from library.interfaces.api.resources.book import BookResource
 from library.interfaces.api.resources.books import BooksResource
 from library.interfaces.api.resources.catalog_books import CatalogBooksResource
 from library.interfaces.api.resources.copies import CopiesResource
+from library.interfaces.api.resources.memberships import MembershipsResource
+from library.interfaces.api.resources.reader_blocks import ReaderBlocksResource
 from library.interfaces.api.resources.readers import ReadersResource
 from library.interfaces.api.settings import ApiSettings
 
@@ -122,6 +124,21 @@ def register_reader_fake() -> Any:
 
 
 @pytest.fixture
+def extend_membership_fake() -> Any:
+    return FakeUseCase()
+
+
+@pytest.fixture
+def block_reader_fake() -> Any:
+    return FakeUseCase()
+
+
+@pytest.fixture
+def unblock_reader_fake() -> Any:
+    return FakeUseCase()
+
+
+@pytest.fixture
 def find_books_fake() -> Any:
     return FakeQuery(
         result=[
@@ -169,6 +186,9 @@ def client(
     create_catalog_book_fake: Any,
     find_books_fake: Any,
     get_book_fake: Any,
+    extend_membership_fake: Any,
+    block_reader_fake: Any,
+    unblock_reader_fake: Any,
 ) -> testing.TestClient:
     app = create_app(
         api_settings,
@@ -180,6 +200,12 @@ def client(
         book=BookResource(get_book=get_book_fake),
         catalog_books=CatalogBooksResource(
             create_book_from_catalog=create_catalog_book_fake
+        ),
+        memberships=MembershipsResource(
+            extend_membership=extend_membership_fake
+        ),
+        reader_blocks=ReaderBlocksResource(
+            block_reader=block_reader_fake, unblock_reader=unblock_reader_fake
         ),
     )
     app.add_route('/probe', ProbeResource())

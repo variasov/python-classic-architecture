@@ -317,3 +317,84 @@ def test_register_reader_is_saved(client: testing.TestClient, raw_db: Any) -> No
         ) == READER['valid_until']
     finally:
         _delete_reader(raw_db, READER['email'])
+
+
+def test_membership_and_blocking_flow(
+    client: testing.TestClient, raw_db: Any
+) -> None:
+    email = 'reader-membership-e2e@example.com'
+    _delete_reader(raw_db, email)
+    try:
+        registered = client.simulate_post(
+            '/library/readers',
+            headers={'X-User': 'admin'},
+            json={**READER, 'email': email},
+        )
+        assert registered.status_code == 201
+        reader_id: Any = registered.json['id']
+
+        extended = client.simulate_put(
+            '/library/memberships',
+            headers={'X-User': 'admin'},
+            json={'reader_id': reader_id, 'valid_until': '2028-06-30'},
+        )
+        assert extended.status_code == 200
+        assert str(
+            raw_db.scalar(
+                'SELECT valid_until FROM library.readers WHERE id = %(id)s',
+                id=reader_id,
+            )
+        ) == '2028-06-30'
+        assert (
+            raw_db.scalar(
+                'SELECT tier FROM library.readers WHERE id = %(id)s',
+                id=reader_id,
+            )
+            == READER['tier']
+        )
+
+        blocked = client.simulate_post(
+            '/library/reader_blocks',
+            headers={'X-User': 'admin'},
+            json={'reader_id': reader_id},
+        )
+        assert blocked.status_code == 200
+        assert (
+            raw_db.scalar(
+                'SELECT is_blocked FROM library.readers WHERE id = %(id)s',
+                id=reader_id,
+            )
+            is True
+        )
+
+        repeated = client.simulate_post(
+            '/library/reader_blocks',
+            headers={'X-User': 'admin'},
+            json={'reader_id': reader_id},
+        )
+        assert repeated.status_code == 422
+        assert repeated.json[0]['type'] == 'ReaderAlreadyBlocked'
+
+        unblocked = client.simulate_delete(
+            '/library/reader_blocks',
+            headers={'X-User': 'admin'},
+            params={'reader_id': str(reader_id)},
+        )
+        assert unblocked.status_code == 200
+        assert (
+            raw_db.scalar(
+                'SELECT is_blocked FROM library.readers WHERE id = %(id)s',
+                id=reader_id,
+            )
+            is False
+        )
+
+        repeated_unblock = client.simulate_delete(
+            '/library/reader_blocks',
+            headers={'X-User': 'admin'},
+            params={'reader_id': str(reader_id)},
+        )
+        assert repeated_unblock.status_code == 422
+        assert repeated_unblock.json[0]['type'] == 'ReaderNotBlocked'
+    finally:
+        _delete_reader(raw_db, email)

@@ -15,6 +15,8 @@ from library.interfaces.api.resources.book import BookResource
 from library.interfaces.api.resources.books import BooksResource
 from library.interfaces.api.resources.catalog_books import CatalogBooksResource
 from library.interfaces.api.resources.copies import CopiesResource
+from library.interfaces.api.resources.memberships import MembershipsResource
+from library.interfaces.api.resources.reader_blocks import ReaderBlocksResource
 from library.interfaces.api.resources.readers import ReadersResource
 from library.interfaces.api.settings import ApiSettings
 
@@ -26,6 +28,8 @@ def create_app(
     readers: ReadersResource,
     book: BookResource,
     catalog_books: CatalogBooksResource,
+    memberships: MembershipsResource,
+    reader_blocks: ReaderBlocksResource,
 ) -> falcon.App[Any, Any]:
     """Собрать HTTP-приложение: middleware, обработчики ошибок, маршруты"""
     app: falcon.App[Any, Any] = falcon.App(
@@ -39,4 +43,6 @@ def create_app(
     app.add_route('/library/copies', copies)
     app.add_route('/library/readers', readers)
     app.add_route('/library/catalog_books', catalog_books)
+    app.add_route('/library/memberships', memberships)
+    app.add_route('/library/reader_blocks', reader_blocks)
     return app
