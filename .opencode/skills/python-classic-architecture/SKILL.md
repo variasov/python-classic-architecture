@@ -272,10 +272,11 @@ tests/                         # см. references/testing.md
 - ❌ Общая тестовая БД с ручной очисткой в порядке выполнения.
 
 # Библиотеки
-- `classic.criteria` - критерии (см. `python-classic-domain`).
-- `classic.signals.Hub` - сигналы (см. `python-classic-app`, `python-classic-composite`).
-- `classic.db_tools`, `classic.migrations` - работа с SQL DB (см. `python-classic-adapters-sql-db`).
-- `classic.scheduler` - планировщик (см. `python-classic-composite`).
+Библиотеки `classic.*` нишевые, их API нельзя писать по памяти. Перед первым использованием библиотеки в задаче загрузи её скилл-справку (`classic-<name>`): там API, сверенный с установленной версией. Правила применения остаются в навыках слоёв.
+- `classic.criteria` - критерии (см. `python-classic-domain`; API - `classic-criteria`).
+- `classic.signals.Hub` - сигналы (см. `python-classic-app`, `python-classic-composite`; API - `classic-signals`).
+- `classic.db_tools`, `classic.migrations` - работа с SQL DB (см. `python-classic-adapters-sql-db`; API - `classic-db-tools`, `classic-migrations`).
+- `classic.scheduler` - планировщик (см. `python-classic-composite`; API - `classic-scheduler`).
 - `falcon`, `waitress` - HTTP API (см. `python-classic-adapters-http-api`).
 - `pydantic`, `pydantic-settings` - парсинг в адаптерах и настройки (см. раздел «Настройки»).
 - `pyright`, `ruff`, `vulture` - статический анализ (см. Типизация и статический анализ).

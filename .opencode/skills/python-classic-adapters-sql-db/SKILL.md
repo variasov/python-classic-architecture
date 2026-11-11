@@ -58,6 +58,7 @@ compatibility: opencode
 - Внешние ключи от вложенных таблиц агрегата к корню и от зависимых агрегатов объявляются с `ON DELETE CASCADE`, чтобы удаление корня (в том числе в тестах) не требовало перечислять связанные таблицы.
 
 ## Запросы
+- API classic-db-tools и classic-migrations (сигнатуры, шаблоны, маппинг, Migrator) - в скиллах `classic-db-tools` и `classic-migrations`. Загрузи их до написания кода адаптера; здесь - только правила применения.
 - Для работы с SQL-запросами в Python используется classic-db-tools + драйвер для БД. Запросы загружаются из файлов: `engine.query_from('aggregates/readers/get_by_id.sql')`.
 - `Engine` создаётся в композите, `templates_dirs` указывает на `SQL_DIR_PATH`. Драйвер и фабрика соединений передаются позиционно: `Engine(psycopg, lambda: psycopg.connect(conninfo=settings.DB_CONN_INFO), templates_dirs=[SQL_DIR_PATH])`. Репозитории и гейтвеи получают `Engine` через конструктор.
 - Запросы репозитория лежат в `sql/aggregates/<aggregate>/`, запросы гейтвея - в `sql/gateways/<group>/`.

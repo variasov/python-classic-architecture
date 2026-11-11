@@ -6,7 +6,8 @@
 ## Описание
 
 ### Skills
-Скиллы находятся в .opencode\skills: архитектурные навыки `python-classic-*`.
+Скиллы находятся в .opencode\skills: архитектурные навыки `python-classic-*`
+и справки по API библиотек `classic-*` (db-tools, migrations, criteria, signals, scheduler).
 
 ### Demo
 В docs\demo-spec.md находится спецификация для демо-проекта.
