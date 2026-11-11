@@ -2,6 +2,7 @@ from typing import Any
 
 import pytest
 from falcon import testing
+from pytest_httpserver import HTTPServer
 
 BOOK: dict[str, Any] = {
     'isbn': '9785171183660',
@@ -16,6 +17,15 @@ COPY: dict[str, Any] = {
     'rack': 2,
     'shelf': 3,
 }
+
+
+def _catalog_payload(isbn: str) -> dict[str, Any]:
+    return {
+        'isbn': isbn,
+        'title': 'Преступление и наказание',
+        'authors': ['Фёдор Достоевский'],
+        'year': 1866,
+    }
 
 
 def _delete_book(raw_db: Any, isbn: str) -> None:
@@ -182,3 +192,82 @@ def test_book_card_and_search_return_copies(
 
 def test_unknown_route_is_404(client: testing.TestClient) -> None:
     assert client.simulate_get('/library/nothing').status_code == 404
+
+
+def test_create_book_from_catalog(
+    client: testing.TestClient,
+    raw_db: Any,
+    catalog_server: HTTPServer,
+) -> None:
+    isbn = '9785171183665'
+    _delete_book(raw_db, isbn)
+    catalog_server.clear()
+    catalog_server.clear_all_handlers()
+    catalog_server.expect_oneshot_request(
+        '/books', query_string={'isbn': isbn}
+    ).respond_with_json(_catalog_payload(isbn))
+    try:
+        response = client.simulate_post(
+            '/library/catalog_books',
+            headers={'X-User': 'admin'},
+            json={'isbn': isbn},
+        )
+
+        assert response.status_code == 201
+        book_id: Any = response.json['id']
+        assert isinstance(book_id, int)
+        assert (
+            raw_db.scalar(
+                'SELECT title FROM library.books WHERE id = %(id)s',
+                id=book_id,
+            )
+            == 'Преступление и наказание'
+        )
+        assert raw_db.scalar(
+            'SELECT published_year FROM library.books WHERE id = %(id)s',
+            id=book_id,
+        ) == 1866
+        assert raw_db.scalars(
+            'SELECT name FROM library.book_authors '
+            'WHERE book_id = %(id)s ORDER BY position',
+            id=book_id,
+        ) == ['Фёдор Достоевский']
+    finally:
+        _delete_book(raw_db, isbn)
+        catalog_server.clear()
+        catalog_server.clear_all_handlers()
+
+
+def test_create_book_from_catalog_retries_temporary_failure(
+    client: testing.TestClient,
+    raw_db: Any,
+    catalog_server: HTTPServer,
+) -> None:
+    isbn = '9785171183666'
+    _delete_book(raw_db, isbn)
+    catalog_server.clear()
+    catalog_server.clear_all_handlers()
+    catalog_server.expect_oneshot_request(
+        '/books', query_string={'isbn': isbn}
+    ).respond_with_data('temporary failure', status=500)
+    catalog_server.expect_oneshot_request(
+        '/books', query_string={'isbn': isbn}
+    ).respond_with_json(_catalog_payload(isbn))
+    try:
+        response = client.simulate_post(
+            '/library/catalog_books',
+            headers={'X-User': 'admin'},
+            json={'isbn': isbn},
+        )
+
+        assert response.status_code == 201
+        book_id: Any = response.json['id']
+        assert raw_db.scalar(
+            'SELECT title FROM library.books WHERE id = %(id)s',
+            id=book_id,
+        ) == 'Преступление и наказание'
+        assert len(catalog_server.log) == 2
+    finally:
+        _delete_book(raw_db, isbn)
+        catalog_server.clear()
+        catalog_server.clear_all_handlers()

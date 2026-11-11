@@ -32,6 +32,7 @@ for _name, _value in dotenv_values(_ENV_FILE).items():
 
 os.environ.setdefault('API_HOST', '127.0.0.1')
 os.environ.setdefault('API_PORT', '8080')
+os.environ.setdefault('ISBN_CATALOG_URL', 'http://127.0.0.1:9/')
 
 TODAY = date(2026, 3, 10)
 TOMORROW = date(2026, 3, 11)

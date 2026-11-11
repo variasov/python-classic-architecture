@@ -77,3 +77,24 @@
 - Состояние: `pytest 148 passed`, `pyright 0 errors`. ruff/vulture не запускались: их нет в `.venv-wsl`,
   установка запрещена. Отклонения: гейтвеи разложены в два файла (не `books.py`) по правилу
   «класс=файл»; `BookListItemDTO` содержит `available_copies`.
+
+### 04. Книга из каталога ISBN (выполнено)
+- App: `use_cases/books/create_book_from_catalog.py` - `CatalogBook`, ABC `IsbnCatalog.find`,
+  `CreateBookFromCatalogParams` (13 символов), `BookNotInCatalog` (`AppError`, в файле команды), право `books.edit`.
+- Интеграция: `integrations/isbn_catalog/{client,settings}.py` - `CatalogBookPayload`, `IsbnCatalogClient`
+  на `urllib3.PoolManager`, `GET {URL}/books?isbn=...` (`urlencode`), `TypeAdapter(...).validate_json`;
+  404 -> `None`, прочие коды/невалидный JSON/сетевые ошибки -> `IsbnCatalogUnavailable`.
+- Композит: `composites/aspects/retry.py` на `find`, `composites/integrations/isbn_catalog/` (настройки и
+  клиент), команда с `engine.transaction`, ресурс `interfaces/api/resources/catalog_books.py` (`POST` -> 201).
+- ОТКЛОНЕНИЕ: `tenacity` в `.venv-wsl` нет, установка запрещена. Аспект повтора на stdlib
+  (`functools.wraps` + `time.sleep`): 3 попытки, паузы 0.1/0.2 с, исходное исключение пробрасывается.
+- Перенос `create_app`: middleware, обработчики ошибок и маршруты переехали в `interfaces/api/app.py`
+  без импорта композита и инстансов настроек; `composites/interfaces/api/wsgi.py` теперь только
+  импортирует фабрику, ресурсы и собирает модульный `app`. Тесты API импортируют фабрику из
+  `library.interfaces.api.app` (отступление от скилла HTTP, иначе импорт требовал бы `ISBN_CATALOG_URL`).
+- Тесты: unit app (`FakeIsbnCatalog`, создание, `BookNotInCatalog`, права, длины isbn); клиент против
+  `pytest-httpserver` (200/404/500/невалидный JSON/неполный payload/сеть, путь и query запроса);
+  HTTP 201/400/403/422; e2e со stub-каталогом (создание и retry после первого 500).
+- `tests/conftest.py` задаёт `ISBN_CATALOG_URL` по умолчанию, `tests/composites/conftest.py` поднимает
+  session-сервер и подставляет адрес. Состояние: `pytest 166 passed`, `pyright 0 errors`; ruff/vulture
+  не запускались (их нет, установка запрещена).

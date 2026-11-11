@@ -5,6 +5,12 @@ import pytest
 
 from library.app.commands.domain.book import BooksRepo
 from library.app.commands.use_cases.books.create_book import CreateBook, CreateBookParams
+from library.app.commands.use_cases.books.create_book_from_catalog import (
+    CatalogBook,
+    CreateBookFromCatalog,
+    CreateBookFromCatalogParams,
+    IsbnCatalog,
+)
 from library.app.queries.books.find_books import (
     BookListItemDTO,
     FindBooks,
@@ -45,6 +51,16 @@ class FakeFindBooksGateway(FindBooksGateway):
         return self.books
 
 
+class FakeIsbnCatalog(IsbnCatalog):
+    """Каталог ISBN: отдаёт книги из подготовленного словаря"""
+
+    def __init__(self, books: dict[str, CatalogBook] | None = None) -> None:
+        self.books = books or {}
+
+    def find(self, isbn: str) -> CatalogBook | None:
+        return self.books.get(isbn)
+
+
 @pytest.fixture
 def books_repo(in_memory_books_repo: BooksRepo) -> BooksRepo:
     return in_memory_books_repo
@@ -53,6 +69,20 @@ def books_repo(in_memory_books_repo: BooksRepo) -> BooksRepo:
 @pytest.fixture
 def create_book(books_repo: BooksRepo) -> CreateBook:
     return CreateBook(books=books_repo, logger=logging.getLogger('test'))
+
+
+@pytest.fixture
+def isbn_catalog() -> FakeIsbnCatalog:
+    return FakeIsbnCatalog()
+
+
+@pytest.fixture
+def create_book_from_catalog(
+    books_repo: BooksRepo, isbn_catalog: FakeIsbnCatalog
+) -> CreateBookFromCatalog:
+    return CreateBookFromCatalog(
+        books=books_repo, catalog=isbn_catalog, logger=logging.getLogger('test')
+    )
 
 
 @pytest.fixture
@@ -79,6 +109,18 @@ def create_book_params() -> Callable[..., CreateBookParams]:
         }
         fields.update(overrides)
         return CreateBookParams(**fields)  # type: ignore[arg-type]
+
+    return factory
+
+
+@pytest.fixture
+def create_book_from_catalog_params() -> Callable[
+    ..., CreateBookFromCatalogParams
+]:
+    def factory(**overrides: object) -> CreateBookFromCatalogParams:
+        fields: dict[str, object] = {'isbn': '9785171183660'}
+        fields.update(overrides)
+        return CreateBookFromCatalogParams(**fields)  # type: ignore[arg-type]
 
     return factory
 

@@ -12,9 +12,10 @@ from library.app.errors import AppError
 from library.app.queries.books.find_books import BookListItemDTO
 from library.app.queries.books.get_book import BookCardDTO, BookCopyDTO
 from library.app.roles import PermissionDenied
-from library.composites.interfaces.api.wsgi import create_app
+from library.interfaces.api.app import create_app
 from library.interfaces.api.resources.book import BookResource
 from library.interfaces.api.resources.books import BooksResource
+from library.interfaces.api.resources.catalog_books import CatalogBooksResource
 from library.interfaces.api.resources.copies import CopiesResource
 from library.interfaces.api.settings import ApiSettings
 
@@ -110,6 +111,11 @@ def create_copies_fake() -> Any:
 
 
 @pytest.fixture
+def create_catalog_book_fake() -> Any:
+    return FakeUseCase(result=3)
+
+
+@pytest.fixture
 def find_books_fake() -> Any:
     return FakeQuery(
         result=[
@@ -153,6 +159,7 @@ def client(
     api_settings: ApiSettings,
     create_book_fake: Any,
     create_copies_fake: Any,
+    create_catalog_book_fake: Any,
     find_books_fake: Any,
     get_book_fake: Any,
 ) -> testing.TestClient:
@@ -163,6 +170,9 @@ def client(
         ),
         copies=CopiesResource(add_copy=create_copies_fake),
         book=BookResource(get_book=get_book_fake),
+        catalog_books=CatalogBooksResource(
+            create_book_from_catalog=create_catalog_book_fake
+        ),
     )
     app.add_route('/probe', ProbeResource())
     return testing.TestClient(app)
