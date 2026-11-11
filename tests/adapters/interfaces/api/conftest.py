@@ -17,6 +17,7 @@ from library.interfaces.api.resources.book import BookResource
 from library.interfaces.api.resources.books import BooksResource
 from library.interfaces.api.resources.catalog_books import CatalogBooksResource
 from library.interfaces.api.resources.copies import CopiesResource
+from library.interfaces.api.resources.readers import ReadersResource
 from library.interfaces.api.settings import ApiSettings
 
 
@@ -116,6 +117,11 @@ def create_catalog_book_fake() -> Any:
 
 
 @pytest.fixture
+def register_reader_fake() -> Any:
+    return FakeUseCase(result=4)
+
+
+@pytest.fixture
 def find_books_fake() -> Any:
     return FakeQuery(
         result=[
@@ -159,6 +165,7 @@ def client(
     api_settings: ApiSettings,
     create_book_fake: Any,
     create_copies_fake: Any,
+    register_reader_fake: Any,
     create_catalog_book_fake: Any,
     find_books_fake: Any,
     get_book_fake: Any,
@@ -169,6 +176,7 @@ def client(
             create_book=create_book_fake, find_books=find_books_fake
         ),
         copies=CopiesResource(add_copy=create_copies_fake),
+        readers=ReadersResource(register_reader=register_reader_fake),
         book=BookResource(get_book=get_book_fake),
         catalog_books=CatalogBooksResource(
             create_book_from_catalog=create_catalog_book_fake

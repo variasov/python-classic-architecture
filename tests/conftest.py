@@ -21,6 +21,13 @@ from library.app.commands.domain.copy import (
     CopiesRepo,
     ShelfLocation,
 )
+from library.app.commands.domain.reader import (
+    Contact,
+    Membership,
+    Reader,
+    ReaderNotFound,
+    ReadersRepo,
+)
 from library.infra.db.constants import MIGRATIONS_DIR_PATH, SQL_DIR_PATH
 from library.infra.db.settings import DBSettings
 
@@ -209,3 +216,51 @@ def copy_factory() -> Callable[..., Copy]:
 @pytest.fixture
 def in_memory_copies_repo() -> InMemoryCopiesRepo:
     return InMemoryCopiesRepo()
+
+
+class InMemoryReadersRepo(ReadersRepo):
+    """In-memory реализация репозитория читателей"""
+
+    def __init__(self) -> None:
+        self._readers: dict[int, Reader] = {}
+        self._next_id = 1
+
+    def get_by_id(self, id: int) -> Reader:
+        if id not in self._readers:
+            raise ReaderNotFound(id=id)
+        return deepcopy(self._readers[id])
+
+    def save(self, reader: Reader) -> Reader:
+        reader.check()
+        if reader.id is None:
+            reader.id = self._next_id
+            self._next_id += 1
+        self._readers[reader.id] = deepcopy(reader)
+        return reader
+
+    def find(self, criteria: Criteria[Reader]) -> list[Reader]:
+        return [
+            deepcopy(reader)
+            for reader in self._readers.values()
+            if criteria.is_satisfied_by(reader)
+        ]
+
+
+def make_reader(**overrides: Any) -> Reader:
+    fields: dict[str, Any] = {
+        'full_name': 'Иван Петров',
+        'contact': Contact(email='ivan@example.com'),
+        'membership': Membership(tier='basic', valid_until=TOMORROW),
+    }
+    fields.update(overrides)
+    return Reader(**fields)
+
+
+@pytest.fixture
+def reader_factory() -> Callable[..., Reader]:
+    return make_reader
+
+
+@pytest.fixture
+def in_memory_readers_repo() -> InMemoryReadersRepo:
+    return InMemoryReadersRepo()

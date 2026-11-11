@@ -1,0 +1,13 @@
+{# Критерии Reader. Таблица readers - алиас r #}
+
+{% macro membership_active(criteria) -%}
+    r.valid_until >= {{ criteria.on }}
+{%- endmacro %}
+
+{% macro has_tier(criteria) -%}
+    r.tier = {{ criteria.tier }}
+{%- endmacro %}
+
+{% macro not_blocked(criteria) -%}
+    r.is_blocked = FALSE
+{%- endmacro %}

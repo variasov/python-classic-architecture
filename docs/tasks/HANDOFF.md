@@ -98,3 +98,27 @@
 - `tests/conftest.py` задаёт `ISBN_CATALOG_URL` по умолчанию, `tests/composites/conftest.py` поднимает
   session-сервер и подставляет адрес. Состояние: `pytest 166 passed`, `pyright 0 errors`; ruff/vulture
   не запускались (их нет, установка запрещена).
+
+### 05. Регистрация читателя (выполнено)
+- Домен `domain/reader.py`: frozen `Contact(email, phone=None)` и `Membership(tier, valid_until)` с
+  `ClassVar`-таблицей лимитов (basic 3, premium 10) и `loan_limit`; `Reader` (`id` последним),
+  рекурсивный `check()`, критерии `membership_active`/`has_tier`/`not_blocked`, `ReadersRepo`,
+  `ReaderNotFound`. Поведение `extend_membership`/`block`/`unblock` не добавлялось - задача 06.
+- App: `use_cases/readers/register_reader.py` - `RegisterReaderParams` без дополнительных проверок,
+  право `readers.edit` первой строкой, сборка агрегата и `save`.
+- БД: `library.readers` в `0001.init.sql` и `DDL.sql`; `aggregates/readers/{get_by_id,insert,update}.sql`,
+  `find.sql.tmpl`, `criteria.sql.tmpl` на каждый макрос. `Contact`/`Membership` - `Value` +
+  `Assign('contact')`/`Assign('membership')`, колонки `contact__*`/`membership__*`; запись плоскими
+  параметрами `contact_email`, `contact_phone`, `membership_tier`, `membership_valid_until`.
+  Репозиторий - `infra/db/repos/readers.py` (`DbReadersRepo`).
+- HTTP: `POST /library/readers` -> 201 `{"id"}`; `create_app` принимает `readers` третьим ресурсом,
+  обновлены `wsgi.py` и API-conftest. Композит: инстансы репозитория, команды (с `engine.transaction`)
+  и ресурса.
+- Тесты: домен (инварианты, `loan_limit`, критерии в обеих формах и комбинациях, hypothesis на пустые
+  ФИО/email без `@`/неизвестные тарифы, граница `valid_until`); команда (регистрация, телефон `None`,
+  права, инварианты не обходятся); адаптер (контракт DB+in-memory, roundtrip VO, обновление,
+  `ReaderNotFound`, невалидный не пишется, каждый SQL-макрос и комбинации сверяются с
+  `is_satisfied_by`); HTTP (201/400/403/422); e2e с очисткой `DELETE FROM library.readers` по email.
+- Корневой `tests/conftest.py`: `InMemoryReadersRepo`, `reader_factory` (по умолчанию
+  `Membership('basic', TOMORROW)`).
+- Состояние: `pytest 224 passed`, `pyright 0 errors`. ruff/vulture не запускались (их нет в `.venv-wsl`).

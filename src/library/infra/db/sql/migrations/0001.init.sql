@@ -28,3 +28,13 @@ CREATE TABLE library.copies (
 
 CREATE UNIQUE INDEX copies_inventory_number_uq
     ON library.copies (inventory_number);
+
+CREATE TABLE library.readers (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    full_name text NOT NULL,
+    email text NOT NULL,
+    phone text,
+    tier text NOT NULL,
+    valid_until date NOT NULL,
+    is_blocked boolean NOT NULL DEFAULT FALSE
+);

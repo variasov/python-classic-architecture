@@ -18,6 +18,14 @@ COPY: dict[str, Any] = {
     'shelf': 3,
 }
 
+READER: dict[str, Any] = {
+    'full_name': 'Иван Петров',
+    'email': 'reader-e2e@example.com',
+    'phone': '+7 900 000-00-00',
+    'tier': 'premium',
+    'valid_until': '2027-01-31',
+}
+
 
 def _catalog_payload(isbn: str) -> dict[str, Any]:
     return {
@@ -30,6 +38,10 @@ def _catalog_payload(isbn: str) -> dict[str, Any]:
 
 def _delete_book(raw_db: Any, isbn: str) -> None:
     raw_db.execute('DELETE FROM library.books WHERE isbn = %(isbn)s', isbn=isbn)
+
+
+def _delete_reader(raw_db: Any, email: str) -> None:
+    raw_db.execute('DELETE FROM library.readers WHERE email = %(email)s', email=email)
 
 
 def _create_book(client: testing.TestClient, raw_db: Any, isbn: str) -> int:
@@ -271,3 +283,37 @@ def test_create_book_from_catalog_retries_temporary_failure(
         _delete_book(raw_db, isbn)
         catalog_server.clear()
         catalog_server.clear_all_handlers()
+
+
+def test_register_reader_is_saved(client: testing.TestClient, raw_db: Any) -> None:
+    _delete_reader(raw_db, READER['email'])
+    try:
+        response = client.simulate_post(
+            '/library/readers', headers={'X-User': 'admin'}, json=READER
+        )
+
+        assert response.status_code == 201
+        reader_id: Any = response.json['id']
+        assert isinstance(reader_id, int)
+        assert (
+            raw_db.scalar(
+                'SELECT full_name FROM library.readers WHERE id = %(id)s',
+                id=reader_id,
+            )
+            == READER['full_name']
+        )
+        assert (
+            raw_db.scalar(
+                'SELECT tier FROM library.readers WHERE id = %(id)s',
+                id=reader_id,
+            )
+            == READER['tier']
+        )
+        assert str(
+            raw_db.scalar(
+                'SELECT valid_until FROM library.readers WHERE id = %(id)s',
+                id=reader_id,
+            )
+        ) == READER['valid_until']
+    finally:
+        _delete_reader(raw_db, READER['email'])
