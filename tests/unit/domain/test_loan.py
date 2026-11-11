@@ -9,7 +9,9 @@ from library.app.commands.domain.loan import (
     Extension,
     ExtensionNotForward,
     Loan,
+    LoanAlreadyReturned,
     LoanNotFound,
+    LoanOverdue,
     LoanPeriod,
     LoanPeriodInvalid,
     LoanReturnedBeforeIssue,
@@ -254,3 +256,117 @@ def test_criteria_combinations(loan_factory: Callable[..., Loan]) -> None:
 
 def test_loan_not_found_message_uses_id() -> None:
     assert '7' in str(LoanNotFound(id=7))
+
+
+def test_extend_moves_due_and_adds_extension(
+    loan_factory: Callable[..., Loan],
+) -> None:
+    loan = loan_factory()
+    initial_due = loan.period.due
+
+    loan.extend(on=TOMORROW, days=7)
+
+    assert loan.period == LoanPeriod(start=TODAY, due=initial_due + timedelta(days=7))
+    assert loan.extensions == [
+        Extension(extended_at=TOMORROW, new_due=initial_due + timedelta(days=7))
+    ]
+    loan.check()
+
+
+def test_two_extensions_are_allowed(loan_factory: Callable[..., Loan]) -> None:
+    loan = loan_factory()
+    first_due = loan.period.due
+
+    loan.extend(on=TOMORROW, days=7)
+    loan.extend(on=first_due + timedelta(days=7), days=7)
+
+    loan.check()
+    assert len(loan.extensions) == 2
+    assert loan.period.due == first_due + timedelta(days=14)
+
+
+def test_third_extension_is_caught_by_check(
+    loan_factory: Callable[..., Loan],
+) -> None:
+    loan = loan_factory()
+
+    loan.extend(on=TOMORROW, days=7)
+    loan.extend(on=TOMORROW, days=7)
+    loan.extend(on=TOMORROW, days=7)
+
+    with pytest.raises(TooManyExtensions):
+        loan.check()
+
+
+def test_returned_loan_cannot_be_extended(
+    loan_factory: Callable[..., Loan],
+) -> None:
+    loan = loan_factory(returned_at=TOMORROW)
+
+    with pytest.raises(LoanAlreadyReturned):
+        loan.extend(on=TOMORROW, days=7)
+
+    assert loan.extensions == []
+
+
+def test_overdue_loan_cannot_be_extended(
+    loan_factory: Callable[..., Loan],
+) -> None:
+    loan = loan_factory(period=LoanPeriod(start=TODAY, due=YESTERDAY))
+
+    with pytest.raises(LoanOverdue):
+        loan.extend(on=TODAY, days=7)
+
+    assert loan.extensions == []
+    assert loan.period.due == YESTERDAY
+
+
+def test_loan_due_today_can_be_extended(
+    loan_factory: Callable[..., Loan],
+) -> None:
+    loan = loan_factory(
+        period=LoanPeriod(
+            start=TODAY - timedelta(days=Loan.TERM_DAYS), due=TODAY
+        )
+    )
+
+    loan.extend(on=TODAY, days=7)
+
+    loan.check()
+    assert loan.period.due == TODAY + timedelta(days=7)
+
+
+def test_close_sets_returned_at(loan_factory: Callable[..., Loan]) -> None:
+    loan = loan_factory()
+
+    loan.close(on=TOMORROW)
+
+    assert loan.returned_at == TOMORROW
+    assert loan.returned()
+    loan.check()
+
+
+def test_repeated_close_raises(loan_factory: Callable[..., Loan]) -> None:
+    loan = loan_factory()
+    loan.close(on=TODAY)
+
+    with pytest.raises(LoanAlreadyReturned):
+        loan.close(on=TOMORROW)
+
+    assert loan.returned_at == TODAY
+
+
+def test_close_before_issue_is_caught_by_check(
+    loan_factory: Callable[..., Loan],
+) -> None:
+    loan = loan_factory()
+
+    loan.close(on=YESTERDAY)
+
+    with pytest.raises(LoanReturnedBeforeIssue):
+        loan.check()
+
+
+def test_extend_and_close_errors_have_messages() -> None:
+    assert '7' in str(LoanAlreadyReturned(loan_id=7))
+    assert '7' in str(LoanOverdue(loan_id=7))

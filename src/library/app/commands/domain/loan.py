@@ -42,6 +42,22 @@ class LoanReturnedBeforeIssue(DomainError):
 
 
 @dataclass
+class LoanAlreadyReturned(DomainError):
+    loan_id: int | None
+
+    def __str__(self) -> str:
+        return f'Выдача с id={self.loan_id} уже возвращена'
+
+
+@dataclass
+class LoanOverdue(DomainError):
+    loan_id: int | None
+
+    def __str__(self) -> str:
+        return f'Выдача с id={self.loan_id} просрочена'
+
+
+@dataclass
 class LoanNotFound(DomainError):
     id: int
 
@@ -87,13 +103,27 @@ class Loan:
         self.period.check()
         if len(self.extensions) > self.MAX_EXTENSIONS:
             raise TooManyExtensions(loan_id=self.id)
-        previous_due = self.period.due
+        previous_due = self.period.start + timedelta(days=self.TERM_DAYS)
         for extension in self.extensions:
             if extension.new_due <= previous_due:
                 raise ExtensionNotForward(loan_id=self.id)
             previous_due = extension.new_due
         if self.returned_at is not None and self.returned_at < self.period.start:
             raise LoanReturnedBeforeIssue(loan_id=self.id)
+
+    def extend(self, on: date, days: int) -> None:
+        if self.returned():
+            raise LoanAlreadyReturned(loan_id=self.id)
+        if self.overdue(on=on):
+            raise LoanOverdue(loan_id=self.id)
+        new_due = self.period.due + timedelta(days=days)
+        self.extensions.append(Extension(extended_at=on, new_due=new_due))
+        self.period = LoanPeriod(start=self.period.start, due=new_due)
+
+    def close(self, on: date) -> None:
+        if self.returned():
+            raise LoanAlreadyReturned(loan_id=self.id)
+        self.returned_at = on
 
     @criteria
     def overdue(self, on: date) -> bool:

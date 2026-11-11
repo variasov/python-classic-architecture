@@ -17,10 +17,14 @@ from library.interfaces.api.resources.book import BookResource
 from library.interfaces.api.resources.books import BooksResource
 from library.interfaces.api.resources.catalog_books import CatalogBooksResource
 from library.interfaces.api.resources.copies import CopiesResource
+from library.interfaces.api.resources.loan_extensions import (
+    LoanExtensionsResource,
+)
 from library.interfaces.api.resources.loans import LoansResource
 from library.interfaces.api.resources.memberships import MembershipsResource
 from library.interfaces.api.resources.reader_blocks import ReaderBlocksResource
 from library.interfaces.api.resources.readers import ReadersResource
+from library.interfaces.api.resources.returns import ReturnsResource
 from library.interfaces.api.settings import ApiSettings
 
 
@@ -145,6 +149,16 @@ def issue_loan_fake() -> Any:
 
 
 @pytest.fixture
+def extend_loan_fake() -> Any:
+    return FakeUseCase()
+
+
+@pytest.fixture
+def return_loan_fake() -> Any:
+    return FakeUseCase()
+
+
+@pytest.fixture
 def find_books_fake() -> Any:
     return FakeQuery(
         result=[
@@ -196,6 +210,8 @@ def client(
     block_reader_fake: Any,
     unblock_reader_fake: Any,
     issue_loan_fake: Any,
+    extend_loan_fake: Any,
+    return_loan_fake: Any,
 ) -> testing.TestClient:
     app = create_app(
         api_settings,
@@ -215,6 +231,8 @@ def client(
             block_reader=block_reader_fake, unblock_reader=unblock_reader_fake
         ),
         loans=LoansResource(issue_loan=issue_loan_fake),
+        loan_extensions=LoanExtensionsResource(extend_loan=extend_loan_fake),
+        returns=ReturnsResource(return_loan=return_loan_fake),
     )
     app.add_route('/probe', ProbeResource())
     return testing.TestClient(app)

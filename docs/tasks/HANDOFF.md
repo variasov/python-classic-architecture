@@ -172,3 +172,24 @@
   вместо `list`, иначе pyright strict ругается на `list[Unknown]`. Даты в тестах `IssueLoan`/e2e -
   от реального `date.today()` (freezegun в `.venv-wsl` нет).
 - Состояние: `pytest 354 passed`, `pyright 0 errors`. ruff/vulture не запускались (их нет в `.venv-wsl`).
+
+### 08. Продление и возврат (выполнено)
+- Домен `domain/loan.py`: `Loan.extend(on, days)` (проверки `returned()` -> `LoanAlreadyReturned`,
+  затем `overdue(on)` -> `LoanOverdue`, сдвиг `period.due` и `Extension(extended_at, new_due)`) и
+  `Loan.close(on)` (повторный возврат -> `LoanAlreadyReturned`). Новые ошибки - датаклассы `DomainError`.
+- `domain/return_copy.py`: `ReturnCopy(loans, copies).run(loan_id, on)` - `loan.close`, `copy.give_back`,
+  сохранение обоих агрегатов; без транзакции, вызывается командой.
+- App: `use_cases/loans/extend_loan.py` (`ExtendLoanParams` с `MAX_DAYS=30` и `0 < days <= 30`,
+  право `loans.edit`, `date.today()`) и `return_loan.py` (`ReturnLoanParams`, вызывает `ReturnCopy`).
+- HTTP: `interfaces/api/resources/loan_extensions.py` (`POST /library/loan_extensions`, 200) и
+  `returns.py` (`POST /library/returns`, 200); маршруты добавлены в `create_app`, ресурсы - в `wsgi.py`
+  и API-conftest. Композит: `composites/app/commands/{extend_loan,return_loan}.py`, транзакция только
+  на `run` команд; `return_copy` собран без транзакции в модуле `return_loan`.
+- ОТКЛОНЕНИЕ: `Loan.check()` теперь проверяет цепочку продлений от `period.start + TERM_DAYS`, а не от
+  текущего `period.due`: `extend` сдвигает `period.due`, и старая база сравнивала продление с самим собой.
+  Для стандартного срока 14 дней это сохраняет прежние тесты и принимает результат `extend`.
+- Тесты: домен (сдвиг срока, 2 и 3 продления, возвращённая/просроченная, `close`, повторный возврат,
+  `close` раньше выдачи, `ReturnCopy` освобождает экземпляр), app (обе команды, `LoanNotFound`, права,
+  границы `days` 0/1/30/31, состояние репозитория), HTTP (200/400/403/422), e2e выдача -> продление ->
+  возврат с проверкой `copies.is_available`, повторный возврат -> 422. Даты - от реального `date.today()`.
+- Состояние: `pytest 402 passed`, `pyright 0 errors`. ruff/vulture не запускались (их нет в `.venv-wsl`).

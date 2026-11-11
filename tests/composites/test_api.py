@@ -1,8 +1,11 @@
+from datetime import date, timedelta
 from typing import Any
 
 import pytest
 from falcon import testing
 from pytest_httpserver import HTTPServer
+
+from library.app.commands.domain.loan import Loan
 
 BOOK: dict[str, Any] = {
     'isbn': '9785171183660',
@@ -468,6 +471,111 @@ def test_issue_loan_marks_copy_unavailable(
 
         assert repeated.status_code == 422
         assert repeated.json[0]['type'] == 'CopyNotAvailable'
+    finally:
+        if reader_id is not None:
+            raw_db.execute(
+                'DELETE FROM library.readers WHERE id = %(id)s', id=reader_id
+            )
+        if book_id is not None:
+            raw_db.execute(
+                'DELETE FROM library.books WHERE id = %(id)s', id=book_id
+            )
+
+
+def test_extend_and_return_loan_flow(
+    client: testing.TestClient, raw_db: Any
+) -> None:
+    isbn = '9785171183668'
+    inventory_number = 'INV-E2E-LOAN-2'
+    email = 'reader-return-e2e@example.com'
+    _delete_book(raw_db, isbn)
+    _delete_reader(raw_db, email)
+    book_id: int | None = None
+    reader_id: int | None = None
+    try:
+        book = client.simulate_post(
+            '/library/books',
+            headers={'X-User': 'admin'},
+            json={**BOOK, 'isbn': isbn},
+        )
+        assert book.status_code == 201
+        book_id = book.json['id']
+
+        copy = client.simulate_post(
+            '/library/copies',
+            headers={'X-User': 'admin'},
+            json={
+                **COPY,
+                'book_id': book_id,
+                'inventory_number': inventory_number,
+            },
+        )
+        assert copy.status_code == 201
+        copy_id = copy.json['id']
+
+        reader = client.simulate_post(
+            '/library/readers',
+            headers={'X-User': 'admin'},
+            json={**READER, 'email': email, 'valid_until': '2030-12-31'},
+        )
+        assert reader.status_code == 201
+        reader_id = reader.json['id']
+
+        issued = client.simulate_post(
+            '/library/loans',
+            headers={'X-User': 'admin'},
+            json={'reader_id': reader_id, 'copy_id': copy_id},
+        )
+        assert issued.status_code == 201
+        loan_id = issued.json['id']
+
+        extended = client.simulate_post(
+            '/library/loan_extensions',
+            headers={'X-User': 'admin'},
+            json={'loan_id': loan_id, 'days': 7},
+        )
+        assert extended.status_code == 200
+        assert raw_db.scalar(
+            'SELECT period_due FROM library.loans WHERE id = %(id)s',
+            id=loan_id,
+        ) == date.today() + timedelta(days=Loan.TERM_DAYS + 7)
+        assert (
+            raw_db.scalar(
+                'SELECT count(*) FROM library.loan_extensions '
+                'WHERE loan_id = %(id)s',
+                id=loan_id,
+            )
+            == 1
+        )
+
+        returned = client.simulate_post(
+            '/library/returns',
+            headers={'X-User': 'admin'},
+            json={'loan_id': loan_id},
+        )
+        assert returned.status_code == 200
+        assert (
+            raw_db.scalar(
+                'SELECT returned_at FROM library.loans WHERE id = %(id)s',
+                id=loan_id,
+            )
+            == date.today()
+        )
+        assert (
+            raw_db.scalar(
+                'SELECT is_available FROM library.copies WHERE id = %(id)s',
+                id=copy_id,
+            )
+            is True
+        )
+
+        repeated = client.simulate_post(
+            '/library/returns',
+            headers={'X-User': 'admin'},
+            json={'loan_id': loan_id},
+        )
+        assert repeated.status_code == 422
+        assert repeated.json[0]['type'] == 'LoanAlreadyReturned'
     finally:
         if reader_id is not None:
             raw_db.execute(
