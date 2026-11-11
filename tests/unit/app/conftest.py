@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Callable
+from datetime import date
 
 import pytest
 
@@ -23,6 +24,18 @@ from library.app.queries.books.get_book import (
     GetBook,
     GetBookGateway,
     GetBookParams,
+)
+from library.app.queries.loans.find_loans import (
+    FindLoans,
+    FindLoansGateway,
+    FindLoansParams,
+    LoanListItemDTO,
+)
+from library.app.queries.readers.find_readers import (
+    FindReaders,
+    FindReadersGateway,
+    FindReadersParams,
+    ReaderListItemDTO,
 )
 from library.app.roles import Account, Permissions
 
@@ -49,6 +62,34 @@ class FakeFindBooksGateway(FindBooksGateway):
     def run(self, params: FindBooksParams) -> list[BookListItemDTO]:
         self.calls.append(params)
         return self.books
+
+
+class FakeFindLoansGateway(FindLoansGateway):
+    """Гейтвей списка выдач: отдаёт подготовленный список DTO"""
+
+    def __init__(self, loans: list[LoanListItemDTO] | None = None) -> None:
+        self.loans = loans or []
+        self.calls: list[tuple[FindLoansParams, date]] = []
+
+    def run(
+        self, params: FindLoansParams, on: date
+    ) -> list[LoanListItemDTO]:
+        self.calls.append((params, on))
+        return self.loans
+
+
+class FakeFindReadersGateway(FindReadersGateway):
+    """Гейтвей списка читателей: отдаёт подготовленный список DTO"""
+
+    def __init__(self, readers: list[ReaderListItemDTO] | None = None) -> None:
+        self.readers = readers or []
+        self.calls: list[tuple[FindReadersParams, date]] = []
+
+    def run(
+        self, params: FindReadersParams, on: date
+    ) -> list[ReaderListItemDTO]:
+        self.calls.append((params, on))
+        return self.readers
 
 
 class FakeIsbnCatalog(IsbnCatalog):
@@ -146,6 +187,26 @@ def find_books(find_books_gateway: FakeFindBooksGateway) -> FindBooks:
 
 
 @pytest.fixture
+def find_loans_gateway() -> FakeFindLoansGateway:
+    return FakeFindLoansGateway()
+
+
+@pytest.fixture
+def find_loans(find_loans_gateway: FakeFindLoansGateway) -> FindLoans:
+    return FindLoans(gateway=find_loans_gateway)
+
+
+@pytest.fixture
+def find_readers_gateway() -> FakeFindReadersGateway:
+    return FakeFindReadersGateway()
+
+
+@pytest.fixture
+def find_readers(find_readers_gateway: FakeFindReadersGateway) -> FindReaders:
+    return FindReaders(gateway=find_readers_gateway)
+
+
+@pytest.fixture
 def book_copy_factory() -> Callable[..., BookCopyDTO]:
     def factory(**overrides: object) -> BookCopyDTO:
         fields: dict[str, object] = {
@@ -194,5 +255,39 @@ def book_list_item_factory() -> Callable[..., BookListItemDTO]:
         }
         fields.update(overrides)
         return BookListItemDTO(**fields)  # type: ignore[arg-type]
+
+    return factory
+
+
+@pytest.fixture
+def reader_list_item_factory() -> Callable[..., ReaderListItemDTO]:
+    def factory(**overrides: object) -> ReaderListItemDTO:
+        fields: dict[str, object] = {
+            'id': 1,
+            'full_name': 'Иван Петров',
+            'email': 'ivan@example.com',
+            'active_loans': 0,
+            'overdue_loans': 0,
+        }
+        fields.update(overrides)
+        return ReaderListItemDTO(**fields)  # type: ignore[arg-type]
+
+    return factory
+
+
+@pytest.fixture
+def loan_list_item_factory() -> Callable[..., LoanListItemDTO]:
+    def factory(**overrides: object) -> LoanListItemDTO:
+        fields: dict[str, object] = {
+            'id': 1,
+            'reader_id': 1,
+            'copy_id': 1,
+            'start': date(2026, 3, 1),
+            'due': date(2026, 3, 15),
+            'returned_at': None,
+            'extensions_count': 0,
+        }
+        fields.update(overrides)
+        return LoanListItemDTO(**fields)  # type: ignore[arg-type]
 
     return factory

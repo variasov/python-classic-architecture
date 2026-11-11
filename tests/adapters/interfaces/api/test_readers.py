@@ -1,12 +1,14 @@
 from datetime import date
 from typing import Any
 
+import pytest
 from falcon import testing
 
 from library.app.commands.domain.reader import ContactEmailInvalid
 from library.app.commands.use_cases.readers.register_reader import (
     RegisterReaderParams,
 )
+from library.app.queries.readers.find_readers import FindReadersParams
 from library.app.roles import PermissionDenied
 
 READER: dict[str, Any] = {
@@ -16,6 +18,59 @@ READER: dict[str, Any] = {
     'tier': 'premium',
     'valid_until': '2027-01-31',
 }
+
+
+@pytest.mark.parametrize('limit', ['0', '-1', '101'])
+def test_find_readers_invalid_limit_is_400(
+    client: testing.TestClient, find_readers_fake: Any, limit: str
+) -> None:
+    response = client.simulate_get(
+        '/library/readers', params={'limit': limit}
+    )
+
+    assert response.status_code == 400
+    assert find_readers_fake.calls == []
+
+
+def test_find_readers_negative_offset_is_400(
+    client: testing.TestClient, find_readers_fake: Any
+) -> None:
+    response = client.simulate_get(
+        '/library/readers', params={'offset': '-1'}
+    )
+
+    assert response.status_code == 400
+    assert find_readers_fake.calls == []
+
+
+def test_find_readers_returns_200_and_list(
+    client: testing.TestClient, find_readers_fake: Any
+) -> None:
+    response = client.simulate_get(
+        '/library/readers', params={'limit': '5', 'offset': '10'}
+    )
+
+    assert response.status_code == 200
+    assert response.json == [
+        {
+            'id': 4,
+            'full_name': 'Иван Петров',
+            'email': 'ivan@example.com',
+            'active_loans': 1,
+            'overdue_loans': 0,
+        }
+    ]
+    assert find_readers_fake.calls == [
+        FindReadersParams(limit=5, offset=10)
+    ]
+
+
+def test_find_readers_uses_default_params(
+    client: testing.TestClient, find_readers_fake: Any
+) -> None:
+    client.simulate_get('/library/readers')
+
+    assert find_readers_fake.calls == [FindReadersParams()]
 
 
 def test_register_reader_returns_201_and_id(client: testing.TestClient) -> None:

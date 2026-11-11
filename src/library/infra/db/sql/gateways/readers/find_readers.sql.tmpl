@@ -1,0 +1,19 @@
+{# Список читателей с числом выдач на дату запроса #}
+SELECT
+    r.id AS ReaderListItemDTO__id,
+    r.full_name AS ReaderListItemDTO__full_name,
+    r.email AS ReaderListItemDTO__email,
+    count(*) FILTER (
+        WHERE l.id IS NOT NULL AND l.returned_at IS NULL
+    ) AS ReaderListItemDTO__active_loans,
+    count(*) FILTER (
+        WHERE l.id IS NOT NULL
+            AND l.returned_at IS NULL
+            AND l.period_due < {{ on }}
+    ) AS ReaderListItemDTO__overdue_loans
+FROM library.readers r
+LEFT JOIN library.loans l ON l.reader_id = r.id
+GROUP BY r.id, r.full_name, r.email
+ORDER BY r.id
+LIMIT {{ limit }}
+OFFSET {{ offset }}

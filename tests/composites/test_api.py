@@ -205,6 +205,96 @@ def test_book_card_and_search_return_copies(
         _delete_book(raw_db, isbn)
 
 
+def test_reader_and_loan_lists_reflect_issue_and_return(
+    client: testing.TestClient, raw_db: Any
+) -> None:
+    isbn = '9785171183671'
+    email = 'reader-queries-e2e@example.com'
+    _delete_book(raw_db, isbn)
+    _delete_reader(raw_db, email)
+    book_id: int | None = None
+    reader_id: int | None = None
+    try:
+        book_id, copy_id, reader_id = _create_loan_entities(
+            client, isbn, 'INV-E2E-LIST-1', email
+        )
+
+        def reader_item() -> dict[str, Any]:
+            response = client.simulate_get(
+                '/library/readers', params={'limit': '100'}
+            )
+            assert response.status_code == 200
+            return next(
+                item for item in response.json if item['id'] == reader_id
+            )
+
+        initial = reader_item()
+        assert initial['full_name'] == READER['full_name']
+        assert initial['email'] == email
+        assert initial['active_loans'] == 0
+        assert initial['overdue_loans'] == 0
+
+        issued = client.simulate_post(
+            '/library/loans',
+            headers={'X-User': 'admin'},
+            json={'reader_id': reader_id, 'copy_id': copy_id},
+        )
+        assert issued.status_code == 201
+        loan_id: int = issued.json['id']
+
+        after_issue = reader_item()
+        assert after_issue['active_loans'] == 1
+        assert after_issue['overdue_loans'] == 0
+
+        active = client.simulate_get(
+            '/library/loans',
+            params={'reader_id': str(reader_id), 'only_active': 'true'},
+        )
+        assert active.status_code == 200
+        assert active.json == [
+            {
+                'id': loan_id,
+                'reader_id': reader_id,
+                'copy_id': copy_id,
+                'start': str(date.today()),
+                'due': str(date.today() + timedelta(days=Loan.TERM_DAYS)),
+                'returned_at': None,
+                'extensions_count': 0,
+            }
+        ]
+
+        returned = client.simulate_post(
+            '/library/returns',
+            headers={'X-User': 'admin'},
+            json={'loan_id': loan_id},
+        )
+        assert returned.status_code == 200
+
+        assert reader_item()['active_loans'] == 0
+        assert (
+            client.simulate_get(
+                '/library/loans',
+                params={'reader_id': str(reader_id), 'only_active': 'true'},
+            ).json
+            == []
+        )
+        all_loans = client.simulate_get(
+            '/library/loans', params={'reader_id': str(reader_id)}
+        )
+        assert all_loans.status_code == 200
+        assert [item['id'] for item in all_loans.json] == [loan_id]
+        assert all_loans.json[0]['returned_at'] == str(date.today())
+    finally:
+        if reader_id is not None:
+            raw_db.execute(
+                'DELETE FROM library.readers WHERE id = %(id)s', id=reader_id
+            )
+        if book_id is not None:
+            raw_db.execute(
+                'DELETE FROM library.books WHERE id = %(id)s', id=book_id
+            )
+
+
 def test_unknown_route_is_404(client: testing.TestClient) -> None:
     assert client.simulate_get('/library/nothing').status_code == 404
 

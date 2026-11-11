@@ -1,5 +1,6 @@
 import json
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 import falcon
@@ -11,6 +12,8 @@ from library.app.commands.domain.errors import DomainError
 from library.app.errors import AppError
 from library.app.queries.books.find_books import BookListItemDTO
 from library.app.queries.books.get_book import BookCardDTO, BookCopyDTO
+from library.app.queries.loans.find_loans import LoanListItemDTO
+from library.app.queries.readers.find_readers import ReaderListItemDTO
 from library.app.roles import PermissionDenied
 from library.interfaces.api.app import create_app
 from library.interfaces.api.resources.book import BookResource
@@ -198,6 +201,38 @@ def get_book_fake() -> Any:
 
 
 @pytest.fixture
+def find_loans_fake() -> Any:
+    return FakeQuery(
+        result=[
+            LoanListItemDTO(
+                id=7,
+                reader_id=4,
+                copy_id=2,
+                start=date(2026, 3, 1),
+                due=date(2026, 3, 15),
+                returned_at=None,
+                extensions_count=1,
+            )
+        ]
+    )
+
+
+@pytest.fixture
+def find_readers_fake() -> Any:
+    return FakeQuery(
+        result=[
+            ReaderListItemDTO(
+                id=4,
+                full_name='Иван Петров',
+                email='ivan@example.com',
+                active_loans=1,
+                overdue_loans=0,
+            )
+        ]
+    )
+
+
+@pytest.fixture
 def client(
     api_settings: ApiSettings,
     create_book_fake: Any,
@@ -212,6 +247,8 @@ def client(
     issue_loan_fake: Any,
     extend_loan_fake: Any,
     return_loan_fake: Any,
+    find_readers_fake: Any,
+    find_loans_fake: Any,
 ) -> testing.TestClient:
     app = create_app(
         api_settings,
@@ -219,7 +256,10 @@ def client(
             create_book=create_book_fake, find_books=find_books_fake
         ),
         copies=CopiesResource(add_copy=create_copies_fake),
-        readers=ReadersResource(register_reader=register_reader_fake),
+        readers=ReadersResource(
+            find_readers=find_readers_fake,
+            register_reader=register_reader_fake,
+        ),
         book=BookResource(get_book=get_book_fake),
         catalog_books=CatalogBooksResource(
             create_book_from_catalog=create_catalog_book_fake
@@ -230,7 +270,9 @@ def client(
         reader_blocks=ReaderBlocksResource(
             block_reader=block_reader_fake, unblock_reader=unblock_reader_fake
         ),
-        loans=LoansResource(issue_loan=issue_loan_fake),
+        loans=LoansResource(
+            find_loans=find_loans_fake, issue_loan=issue_loan_fake
+        ),
         loan_extensions=LoanExtensionsResource(extend_loan=extend_loan_fake),
         returns=ReturnsResource(return_loan=return_loan_fake),
     )

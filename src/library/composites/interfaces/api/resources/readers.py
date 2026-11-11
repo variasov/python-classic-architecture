@@ -1,4 +1,7 @@
 from library.composites.app.commands.register_reader import register_reader
+from library.composites.app.queries.readers.find_readers import find_readers
 from library.interfaces.api.resources.readers import ReadersResource
 
-readers = ReadersResource(register_reader=register_reader)
+readers = ReadersResource(
+    find_readers=find_readers, register_reader=register_reader
+)

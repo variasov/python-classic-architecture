@@ -9,9 +9,85 @@ from library.app.commands.domain.borrow_copy import (
 )
 from library.app.commands.domain.copy import CopyNotAvailable
 from library.app.commands.use_cases.loans.issue_loan import IssueLoanParams
+from library.app.queries.loans.find_loans import FindLoansParams
 from library.app.roles import PermissionDenied
 
 LOAN: dict[str, Any] = {'reader_id': 1, 'copy_id': 2}
+
+
+def test_find_loans_returns_200_and_list(
+    client: testing.TestClient, find_loans_fake: Any
+) -> None:
+    response = client.simulate_get(
+        '/library/loans',
+        params={
+            'reader_id': '4',
+            'only_overdue': 'true',
+            'only_active': 'true',
+            'limit': '5',
+            'offset': '1',
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json == [
+        {
+            'id': 7,
+            'reader_id': 4,
+            'copy_id': 2,
+            'start': '2026-03-01',
+            'due': '2026-03-15',
+            'returned_at': None,
+            'extensions_count': 1,
+        }
+    ]
+    assert find_loans_fake.calls == [
+        FindLoansParams(
+            reader_id=4,
+            only_overdue=True,
+            only_active=True,
+            limit=5,
+            offset=1,
+        )
+    ]
+
+
+def test_find_loans_uses_default_params(
+    client: testing.TestClient, find_loans_fake: Any
+) -> None:
+    client.simulate_get('/library/loans')
+
+    assert find_loans_fake.calls == [FindLoansParams()]
+
+
+@pytest.mark.parametrize('limit', ['0', '-1', '101'])
+def test_find_loans_invalid_limit_is_400(
+    client: testing.TestClient, find_loans_fake: Any, limit: str
+) -> None:
+    response = client.simulate_get('/library/loans', params={'limit': limit})
+
+    assert response.status_code == 400
+    assert find_loans_fake.calls == []
+
+
+def test_find_loans_negative_offset_is_400(
+    client: testing.TestClient, find_loans_fake: Any
+) -> None:
+    response = client.simulate_get('/library/loans', params={'offset': '-1'})
+
+    assert response.status_code == 400
+    assert find_loans_fake.calls == []
+
+
+def test_find_loans_non_integer_reader_is_400(
+    client: testing.TestClient, find_loans_fake: Any
+) -> None:
+    response = client.simulate_get(
+        '/library/loans', params={'reader_id': 'not-a-number'}
+    )
+
+    assert response.status_code == 400
+    assert find_loans_fake.calls == []
 
 
 def test_issue_loan_returns_201_and_id(client: testing.TestClient) -> None:

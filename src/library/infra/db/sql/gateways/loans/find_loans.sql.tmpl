@@ -1,0 +1,28 @@
+{# Список выдач. Границы overdue определяются датой запроса #}
+SELECT
+    l.id AS LoanListItemDTO__id,
+    l.reader_id AS LoanListItemDTO__reader_id,
+    l.copy_id AS LoanListItemDTO__copy_id,
+    l.period_start AS LoanListItemDTO__start,
+    l.period_due AS LoanListItemDTO__due,
+    l.returned_at AS LoanListItemDTO__returned_at,
+    (
+        SELECT count(*)
+        FROM library.loan_extensions e
+        WHERE e.loan_id = l.id
+    ) AS LoanListItemDTO__extensions_count
+FROM library.loans l
+WHERE TRUE
+{% if reader_id is not none %}
+    AND l.reader_id = {{ reader_id }}
+{% endif %}
+{% if only_overdue %}
+    AND l.returned_at IS NULL
+    AND l.period_due < {{ on }}
+{% endif %}
+{% if only_active %}
+    AND l.returned_at IS NULL
+{% endif %}
+ORDER BY l.id
+LIMIT {{ limit }}
+OFFSET {{ offset }}

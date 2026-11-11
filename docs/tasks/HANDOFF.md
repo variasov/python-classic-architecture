@@ -217,3 +217,26 @@
 - ОТКЛОНЕНИЕ: `freezegun` в `.venv-wsl` нет, поэтому в тестах реакции/e2e используется реальный
   `date.today()`, как в задачах 07-08.
 - Состояние: `pytest 436 passed`, `pyright 0 errors`. ruff/vulture не запускались (их нет в `.venv-wsl`).
+
+### 11. Списки читателей и выдач (выполнено)
+- App: `queries/readers/find_readers.py` (`FindReadersParams` с `MAX_LIMIT` и проверками в
+  `__post_init__`, `ReaderListItemDTO`, `FindReadersGateway`, `FindReaders`) и
+  `queries/loans/find_loans.py` (фильтры `reader_id`/`only_overdue`/`only_active`, `LoanListItemDTO`,
+  `FindLoansGateway`, `FindLoans`). Текущую дату берёт запрос: `on = date.today()` и передаётся
+  в гейтвей именованным аргументом `gateway.run(params, on=on)`; сигнатуры гейтвеев включают `on: date`.
+- БД: `sql/gateways/readers/find_readers.sql.tmpl` (LEFT JOIN выдач, `count(*) FILTER` для активных и
+  просроченных, GROUP BY, ORDER BY id, LIMIT/OFFSET) и `sql/gateways/loans/find_loans.sql.tmpl`
+  (`{% if %}` на каждый фильтр, `extensions_count` подзапросом, ORDER BY id). Гейтвеи -
+  `infra/db/gateways/{find_readers,find_loans}.py`; маппинг `Entity(DTO, 'id')`.
+- УТОЧНЕНИЕ: в `count(*) FILTER` для читателей добавлено `l.id IS NOT NULL`: при LEFT JOIN без выдач
+  строка соединения даёт `returned_at IS NULL`, и без этой проверки активной считалась бы одна
+  несуществующая выдача.
+- HTTP: `ReadersResource.on_get` (`GET /library/readers`) и `LoansResource.on_get`
+  (`GET /library/loans`); TypeAdapter на `Params` и `list[DTO]`, ответ 200. `create_app` не менялся -
+  маршруты уже были; ресурсы получили запросы в `composites/interfaces/api/resources/`, инстансы
+  запросов и гейтвеев добавлены в `composites/{app/queries,infra/db/gateways}`, запросы без транзакции.
+- Композит/тесты: `tests/adapters/interfaces/api/conftest.py` собирает ресурсы с fake-запросами.
+  Unit app - fake-гейтвеи, подмена `date` в модуле запроса (без freezegun), границы `limit`/`offset`;
+  БД - счётчики активных/просроченных, все фильтры, дата запроса, пагинация, поля DTO; HTTP - 200/400
+  на query; e2e - после выдачи и возврата списки читателей и выдач отражают состояние.
+- Состояние: `pytest 494 passed`, `pyright 0 errors`. ruff/vulture не запускались (их нет в `.venv-wsl`).
