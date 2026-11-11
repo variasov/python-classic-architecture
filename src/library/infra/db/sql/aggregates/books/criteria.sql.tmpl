@@ -1,0 +1,13 @@
+{# Критерии Book. Таблица books - алиас b #}
+
+{% macro published_after(criteria) -%}
+    b.published_year > {{ criteria.year }}
+{%- endmacro %}
+
+{% macro written_by(criteria) -%}
+    EXISTS (
+        SELECT 1
+        FROM library.book_authors ba
+        WHERE ba.book_id = b.id AND ba.name = {{ criteria.author }}
+    )
+{%- endmacro %}
