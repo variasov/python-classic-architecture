@@ -1,0 +1,13 @@
+{% import 'aggregates/copies/criteria.sql.tmpl' as macros %}
+
+SELECT
+    c.id AS Copy__id,
+    c.book_id AS Copy__book_id,
+    c.inventory_number AS Copy__inventory_number,
+    c.is_available AS Copy__is_available,
+    c.hall AS shelf__hall,
+    c.rack AS shelf__rack,
+    c.shelf AS shelf__shelf
+FROM library.copies c
+WHERE {{ traverse(criteria, macros) | safe }}
+ORDER BY c.id

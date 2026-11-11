@@ -12,6 +12,7 @@ from library.app.errors import AppError
 from library.app.roles import PermissionDenied
 from library.composites.interfaces.api.wsgi import create_app
 from library.interfaces.api.resources.books import BooksResource
+from library.interfaces.api.resources.copies import CopiesResource
 from library.interfaces.api.settings import ApiSettings
 
 
@@ -84,11 +85,20 @@ def create_book_fake() -> Any:
 
 
 @pytest.fixture
+def create_copies_fake() -> Any:
+    return FakeUseCase(result=2)
+
+
+@pytest.fixture
 def client(
-    api_settings: ApiSettings, create_book_fake: Any
+    api_settings: ApiSettings,
+    create_book_fake: Any,
+    create_copies_fake: Any,
 ) -> testing.TestClient:
     app = create_app(
-        api_settings, books=BooksResource(create_book=create_book_fake)
+        api_settings,
+        books=BooksResource(create_book=create_book_fake),
+        copies=CopiesResource(add_copy=create_copies_fake),
     )
     app.add_route('/probe', ProbeResource())
     return testing.TestClient(app)

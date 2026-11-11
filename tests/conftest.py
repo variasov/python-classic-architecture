@@ -15,6 +15,12 @@ from dotenv import dotenv_values
 from psycopg import sql
 
 from library.app.commands.domain.book import Book, BookNotFound, BooksRepo
+from library.app.commands.domain.copy import (
+    Copy,
+    CopyNotFound,
+    CopiesRepo,
+    ShelfLocation,
+)
 from library.infra.db.constants import MIGRATIONS_DIR_PATH, SQL_DIR_PATH
 from library.infra.db.settings import DBSettings
 
@@ -153,3 +159,52 @@ def book_factory() -> Callable[..., Book]:
 @pytest.fixture
 def in_memory_books_repo() -> InMemoryBooksRepo:
     return InMemoryBooksRepo()
+
+
+class InMemoryCopiesRepo(CopiesRepo):
+    """In-memory реализация репозитория экземпляров"""
+
+    def __init__(self) -> None:
+        self._copies: dict[int, Copy] = {}
+        self._next_id = 1
+
+    def get_by_id(self, id: int) -> Copy:
+        if id not in self._copies:
+            raise CopyNotFound(id=id)
+        return deepcopy(self._copies[id])
+
+    def save(self, copy: Copy) -> Copy:
+        copy.check()
+        if copy.id is None:
+            copy.id = self._next_id
+            self._next_id += 1
+        self._copies[copy.id] = deepcopy(copy)
+        return copy
+
+    def find(self, criteria: Criteria[Copy]) -> list[Copy]:
+        return [
+            deepcopy(copy)
+            for copy in self._copies.values()
+            if criteria.is_satisfied_by(copy)
+        ]
+
+
+def make_copy(**overrides: Any) -> Copy:
+    fields: dict[str, Any] = {
+        'book_id': 1,
+        'inventory_number': 'INV-001',
+        'shelf': ShelfLocation(hall='Читальный зал', rack=1, shelf=1),
+        'is_available': True,
+    }
+    fields.update(overrides)
+    return Copy(**fields)
+
+
+@pytest.fixture
+def copy_factory() -> Callable[..., Copy]:
+    return make_copy
+
+
+@pytest.fixture
+def in_memory_copies_repo() -> InMemoryCopiesRepo:
+    return InMemoryCopiesRepo()

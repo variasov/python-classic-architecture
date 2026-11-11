@@ -32,3 +32,25 @@
 - `create_app(settings, books=...)` теперь требует ресурсы явно; тесты API собирают приложение через него (probe-ресурс добавляется тестом).
 - Тесты: unit домена/команды, контрактные (DB+in-memory), SQL-макросы, HTTP с FakeUseCase, e2e (успех + откат транзакции при сбое после вставки).
 - Состояние: `pytest 44 passed`, `pyright 0 errors`.
+
+### 02. Экземпляры книг (выполнено)
+- Домен `domain/copy.py`: `Copy` (id последним полем, как у `Book`), frozen `ShelfLocation`, инварианты
+  `InventoryNumberEmpty` / `ShelfLocationInvalid`, поведение `take`/`give_back` и ошибки
+  `CopyNotAvailable` / `CopyNotTaken`, критерии `available`/`of_book`/`with_inventory_number`,
+  `CopiesRepo` (`get_by_id`/`save`/`find`), `CopyNotFound`.
+- Команда `AddCopy` (`use_cases/books/add_copy.py`): право `books.edit` первой строкой, `BookNotFound`,
+  проверка уникальности через `CopiesRepo.find(Copy.with_inventory_number(...))`, `InventoryNumberTaken`.
+  `AddCopyParams.MIN_POSITION` - ClassVar, `rack`/`shelf` >= 1 в `__post_init__`.
+- БД: таблица `library.copies` в `0001.init.sql` и `DDL.sql` (`book_id` с `ON DELETE CASCADE`,
+  уникальный индекс `copies_inventory_number_uq`), `aggregates/copies/{get_by_id,insert,update}.sql`,
+  `find.sql.tmpl`, `criteria.sql.tmpl`. `ShelfLocation` маппится `Value` + `Assign('shelf')`.
+- HTTP: `POST /library/copies` -> 201 `{"id"}`; ресурс и инстансы в композите, транзакция на `run`.
+- Тесты: домен (инварианты, поведение, критерии в обеих формах и комбинациях, hypothesis на границы),
+  команда (создание, `BookNotFound`, `InventoryNumberTaken`, права, границы rack/shelf),
+  адаптер (контракт DB+in-memory, отсутствие записи при невалидном агрегате, каждый SQL-макрос и
+  комбинации сверяются с `is_satisfied_by`), HTTP (201/400/403/422), e2e книга -> экземпляр и
+  повтор инвентарного номера -> 422.
+- Общие фикстуры `books_repo`/`create_book` перенесены в `tests/unit/app/conftest.py`; корневой
+  `tests/conftest.py` дополнен `InMemoryCopiesRepo` и `copy_factory`.
+- Состояние: `pytest 93 passed`, `pyright 0 errors`. ruff/vulture не запускались: их нет в `.venv-wsl`,
+  установка запрещена. Отклонений от спецификации нет.

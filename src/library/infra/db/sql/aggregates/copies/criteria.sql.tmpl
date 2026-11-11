@@ -1,0 +1,13 @@
+{# Критерии Copy. Таблица copies - алиас c #}
+
+{% macro available(criteria) -%}
+    c.is_available = TRUE
+{%- endmacro %}
+
+{% macro of_book(criteria) -%}
+    c.book_id = {{ criteria.book_id }}
+{%- endmacro %}
+
+{% macro with_inventory_number(criteria) -%}
+    c.inventory_number = {{ criteria.inventory_number }}
+{%- endmacro %}

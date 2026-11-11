@@ -1,4 +1,3 @@
-import logging
 from collections.abc import Callable
 
 import pytest
@@ -9,16 +8,6 @@ from library.app.commands.use_cases.books.create_book import (
     CreateBookParams,
 )
 from library.app.roles import Account, PermissionDenied
-
-
-@pytest.fixture
-def books_repo(in_memory_books_repo: BooksRepo) -> BooksRepo:
-    return in_memory_books_repo
-
-
-@pytest.fixture
-def create_book(books_repo: BooksRepo) -> CreateBook:
-    return CreateBook(books=books_repo, logger=logging.getLogger('test'))
 
 
 def test_creates_book(

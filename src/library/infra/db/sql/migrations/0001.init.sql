@@ -15,3 +15,16 @@ CREATE TABLE library.book_authors (
     name text NOT NULL,
     PRIMARY KEY (book_id, position)
 );
+
+CREATE TABLE library.copies (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    book_id integer NOT NULL REFERENCES library.books (id) ON DELETE CASCADE,
+    inventory_number text NOT NULL,
+    hall text NOT NULL,
+    rack integer NOT NULL,
+    shelf integer NOT NULL,
+    is_available boolean NOT NULL DEFAULT TRUE
+);
+
+CREATE UNIQUE INDEX copies_inventory_number_uq
+    ON library.copies (inventory_number);
