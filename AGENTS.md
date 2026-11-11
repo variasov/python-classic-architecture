@@ -10,6 +10,7 @@
 и справки по API библиотек `classic-*` (db-tools, migrations, criteria, signals, scheduler).
 
 ### Demo
-В docs\demo-spec.md находится спецификация для демо-проекта.
+В docs\demo-spec.md находится спецификация для демо-проекта, в docs\tasks - она же,
+нарезанная на вертикальные задачи.
 
 В src размещен код демо, в tests - тесты для демо.
