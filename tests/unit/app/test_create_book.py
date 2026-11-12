@@ -16,9 +16,9 @@ def test_creates_book(
     admin: Account,
     create_book_params: Callable[..., CreateBookParams],
 ) -> None:
-    book_id = create_book.run(create_book_params(), admin)
+    created = create_book.run(create_book_params(), admin)
 
-    saved = books_repo.get_by_id(book_id)
+    saved = books_repo.get_by_id(created.id)
     assert saved.title == 'Война и мир'
     assert saved.authors == ['Лев Толстой']
 

@@ -20,6 +20,7 @@ dependencies = [
     "classic-scheduler",
     "urllib3",
     "tenacity",
+    "orjson>=3.13.0",
 ]
 
 [dependency-groups]
@@ -33,6 +34,7 @@ dev = [
     "pyright[nodejs]~=1.1.411",
     "ruff~=0.16.4",
     "vulture~=2.16",
+    "import-linter>=2.15",
 ]
 
 [tool.setuptools.packages.find]
@@ -110,7 +112,7 @@ quote-style = "single"
     "PLC0415",  # composite imports must be deferred behind test fixtures/env
     "B017",     # invalid-aggregate tests assert any failure on save
 ]
-"src/library/composites/interfaces/api/wsgi.py" = [
+"src/library/composites/interfaces/web_api/wsgi.py" = [
     "PLC0414",  # side-effect import registers the domain reaction per spec
 ]
 "vulture_whitelist.py" = [
@@ -126,3 +128,61 @@ min_confidence = 80
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"
 pythonpath = ["src"]
+
+[tool.importlinter]
+root_packages = ["library", "classic"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Layers: composites -> adapters -> app"
+type = "layers"
+layers = [
+    "library.composites",
+    "library.interfaces | library.infra | library.integrations",
+    "library.app",
+]
+
+[[tool.importlinter.contracts]]
+name = "Domain imports only stdlib minimum and allowed classic packages"
+type = "forbidden"
+source_modules = ["library.app.commands.domain"]
+forbidden_modules = ["*", "library.app.*", "library.app.commands.*"]
+unmatched_ignore_imports_alerting = "none"
+ignore_imports = [
+    "library.app.commands.domain.** -> abc",
+    "library.app.commands.domain.** -> collections",
+    "library.app.commands.domain.** -> dataclasses",
+    "library.app.commands.domain.** -> datetime",
+    "library.app.commands.domain.** -> enum",
+    "library.app.commands.domain.** -> typing",
+    "library.app.commands.domain.** -> classic.criteria",
+    "library.app.commands.domain.** -> classic.criteria.**",
+    "library.app.commands.domain.** -> classic.signals",
+    "library.app.commands.domain.** -> classic.signals.**",
+]
+
+[[tool.importlinter.contracts]]
+name = "Queries do not import commands"
+type = "forbidden"
+source_modules = ["library.app.queries"]
+forbidden_modules = ["library.app.commands"]
+
+[[tool.importlinter.contracts]]
+name = "App imports only allowed libraries"
+type = "forbidden"
+source_modules = ["library.app"]
+forbidden_modules = ["*"]
+unmatched_ignore_imports_alerting = "none"
+ignore_imports = [
+    "library.app.** -> abc",
+    "library.app.** -> collections",
+    "library.app.** -> dataclasses",
+    "library.app.** -> datetime",
+    "library.app.** -> enum",
+    "library.app.** -> logging",
+    "library.app.** -> typing",
+    "library.app.** -> classic.criteria",
+    "library.app.** -> classic.criteria.**",
+    "library.app.** -> classic.signals",
+    "library.app.** -> classic.signals.**",
+]

@@ -15,11 +15,11 @@
 
 ### 00. Каркас (выполнено)
 - Создан `pyproject.toml` (setuptools, `src` + namespace-пакеты, конфиги pyright strict / ruff / vulture / pytest с `--import-mode=importlib`).
-- Пакет `library` в `src/library/` без единого `__init__.py`; слои: `app`, `app/commands/domain`, `infra/db`, `interfaces/api`, `composites`.
+- Пакет `library` в `src/library/` без единого `__init__.py`; слои: `app`, `app/commands/domain`, `infra/db`, `interfaces/web_api`, `composites`.
 - `app/errors.py` (`AppError`, независимый `AuthError`), `app/roles.py` (`Permissions`, `Account.require`, `PermissionDenied`), `app/commands/domain/errors.py`.
 - `infra/db`: `settings.py` (чувствительные DB_* без дефолтов, `MIGRATIONS_SCHEMA=library_migrations`), `constants.py`, `sql/migrations/0001.init.sql`, `sql/schema/DDL.sql`.
-- `interfaces/api`: `UserMiddleware` (X-User → Account в `req.context.account`), `current_account(req)`, `errors.py` (400/403/422, тело `[{"type","msg","ctx"}]`), `settings.py` (`API_HOST`, `API_PORT`, таблица `USERS`).
-- Композит: `composites/app/hub.py`, `composites/infra/db/{settings,engine}.py`, `composites/interfaces/api/{settings,wsgi,__main__}.py`. `create_app` живёт в `wsgi.py` (по скиллу HTTP), ресурсы передаются аргументами.
+- `interfaces/web_api`: `UserMiddleware` (X-User → Account в `req.context.account`), `errors.py` (400/403/422, тело `[{"type","msg","ctx"}]`), `settings.py` (`API_HOST`, `API_PORT`, таблица `USERS`).
+- Композит: `composites/app/hub.py`, `composites/infra/db/{settings,engine}.py`, `composites/interfaces/web_api/{settings,wsgi,__main__}.py`. `create_app` живёт в `wsgi.py` (по скиллу HTTP), ресурсы передаются аргументами.
 - `tests/conftest.py`: грузит `.env`, при отсутствии API_HOST/API_PORT ставит тестовые значения, даёт `migrated_db` (classic.migrations + дроп схем `library` и `library_migrations`), `db_engine`, `raw_db`, in-memory репозитории и фабрики.
 - В `.venv-wsl` НЕТ ruff, vulture, tenacity, freezegun. Ставить запрещено: ruff/vulture не запускаются, tenacity/freezegun в коде пока не используются (только объявлены в pyproject).
 - Pyright запускать так: `.venv-wsl/bin/pyright --pythonpath .venv-wsl/bin/python` (иначе node-версия не видит venv).
@@ -28,7 +28,7 @@
 - Домен `domain/book.py`: `Book` (isbn 13 цифр, непустое имя, год не в будущем), критерии `published_after`/`written_by`, `BooksRepo` (`get_by_id`/`save`/`find`), ошибки `BookNotFound`, `BookIsbnInvalid`, `BookTitleEmpty`, `BookPublishedInFuture`.
 - Команда `CreateBook` (`use_cases/books/create_book.py`): права `books.edit` первой строкой, `CreateBookParams` (`authors` не пуст, `isbn` 13 символов).
 - БД: таблицы `books`, `book_authors` (`position` 0-based, PK `(book_id, position)`), каскад; `aggregates/books/{get_by_id,insert,update,delete_authors,insert_authors}.sql`, `find.sql.tmpl`, `criteria.sql.tmpl`. Авторы читаются одним `array_agg(... ORDER BY position)` в поле `Book__authors`, при сохранении перезаписываются delete+insert.
-- HTTP: `POST /library/books` → 201 `{"id"}`; ресурс `interfaces/api/resources/books.py`, инстанс в композите, маршрут в `create_app`.
+- HTTP: `POST /library/books` → 201 `{"id"}`; ресурс `interfaces/web_api/resources/books.py`, инстанс в композите, маршрут в `create_app`.
 - `create_app(settings, books=...)` теперь требует ресурсы явно; тесты API собирают приложение через него (probe-ресурс добавляется тестом).
 - Тесты: unit домена/команды, контрактные (DB+in-memory), SQL-макросы, HTTP с FakeUseCase, e2e (успех + откат транзакции при сбое после вставки).
 - Состояние: `pytest 44 passed`, `pyright 0 errors`.
@@ -70,7 +70,7 @@
 - HTTP: `BooksResource.on_get` (`GET /library/books`), `BookResource.on_get` (`GET /library/book?id=`),
   `create_app` принимает `book` четвёртым ресурсом; тестовый `conftest` обновлён. Запросы в композите
   без транзакции (автокоммит); инстансы в `composites/app/queries/books`, `composites/infra/db/gateways`,
-  `composites/interfaces/api/resources/book.py`.
+  `composites/interfaces/web_api/resources/book.py`.
 - Тесты: unit запросов с fake-гейтвеями и все границы `FindBooksParams`; гейтвеи на тестовой БД
   (каждый фильтр, комбинации, оба `order_by`, пагинация, пустой результат, карточка с местом на полке);
   HTTP 200/400/422; e2e книга + 2 экземпляра -> карточка и поиск.
@@ -84,14 +84,14 @@
 - Интеграция: `integrations/isbn_catalog/{client,settings}.py` - `CatalogBookPayload`, `IsbnCatalogClient`
   на `urllib3.PoolManager`, `GET {URL}/books?isbn=...` (`urlencode`), `TypeAdapter(...).validate_json`;
   404 -> `None`, прочие коды/невалидный JSON/сетевые ошибки -> `IsbnCatalogUnavailable`.
-- Композит: `composites/aspects/retry.py` на `find`, `composites/integrations/isbn_catalog/` (настройки и
-  клиент), команда с `engine.transaction`, ресурс `interfaces/api/resources/catalog_books.py` (`POST` -> 201).
+- Композит: `tenacity.retry(...)` на `find` в `composites/integrations/isbn_catalog/client.py`, `composites/integrations/isbn_catalog/` (настройки и
+  клиент), команда с `engine.transaction`, ресурс `interfaces/web_api/resources/catalog_books.py` (`POST` -> 201).
 - ОТКЛОНЕНИЕ: `tenacity` в `.venv-wsl` нет, установка запрещена. Аспект повтора на stdlib
   (`functools.wraps` + `time.sleep`): 3 попытки, паузы 0.1/0.2 с, исходное исключение пробрасывается.
-- Перенос `create_app`: middleware, обработчики ошибок и маршруты переехали в `interfaces/api/app.py`
-  без импорта композита и инстансов настроек; `composites/interfaces/api/wsgi.py` теперь только
+- Перенос `create_app`: middleware, обработчики ошибок и маршруты переехали в `interfaces/web_api/app.py`
+  без импорта композита и инстансов настроек; `composites/interfaces/web_api/wsgi.py` теперь только
   импортирует фабрику, ресурсы и собирает модульный `app`. Тесты API импортируют фабрику из
-  `library.interfaces.api.app` (отступление от скилла HTTP, иначе импорт требовал бы `ISBN_CATALOG_URL`).
+  `library.interfaces.web_api.app` (отступление от скилла HTTP, иначе импорт требовал бы `ISBN_CATALOG_URL`).
 - Тесты: unit app (`FakeIsbnCatalog`, создание, `BookNotInCatalog`, права, длины isbn); клиент против
   `pytest-httpserver` (200/404/500/невалидный JSON/неполный payload/сеть, путь и query запроса);
   HTTP 201/400/403/422; e2e со stub-каталогом (создание и retry после первого 500).
@@ -136,9 +136,9 @@
   `ReaderBlocksResource.on_post` (`POST /library/reader_blocks`, тело `BlockReaderParams`) и `on_delete`
   (`DELETE /library/reader_blocks?reader_id=`, query через `validate_python`). Действия отдают 200,
   тело не пишется. `create_app` принимает `memberships` и `reader_blocks` последними аргументами;
-  обновлены `wsgi.py`, композитные инстансы ресурсов и `tests/adapters/interfaces/api/conftest.py`.
+  обновлены `wsgi.py`, композитные инстансы ресурсов и `tests/adapters/interfaces/web_api/conftest.py`.
 - Композит: `composites/app/commands/{extend_membership,block_reader,unblock_reader}.py` с
-  `engine.transaction` на `run`; инстансы ресурсов в `composites/interfaces/api/resources/`.
+  `engine.transaction` на `run`; инстансы ресурсов в `composites/interfaces/web_api/resources/`.
 - Тесты: домен (успех, tier сохраняется, граница и более ранняя дата, повторная блокировка/разблокировка,
   hypothesis по датам, `__str__`); команды (успех и состояние репозитория, `ReaderNotFound`, доменные
   ошибки, права до обращения к хранилищу); HTTP (200, 400 на тело и query, 403, 422 с `ctx`); e2e
@@ -181,7 +181,7 @@
   сохранение обоих агрегатов; без транзакции, вызывается командой.
 - App: `use_cases/loans/extend_loan.py` (`ExtendLoanParams` с `MAX_DAYS=30` и `0 < days <= 30`,
   право `loans.edit`, `date.today()`) и `return_loan.py` (`ReturnLoanParams`, вызывает `ReturnCopy`).
-- HTTP: `interfaces/api/resources/loan_extensions.py` (`POST /library/loan_extensions`, 200) и
+- HTTP: `interfaces/web_api/resources/loan_extensions.py` (`POST /library/loan_extensions`, 200) и
   `returns.py` (`POST /library/returns`, 200); маршруты добавлены в `create_app`, ресурсы - в `wsgi.py`
   и API-conftest. Композит: `composites/app/commands/{extend_loan,return_loan}.py`, транзакция только
   на `run` команд; `return_copy` собран без транзакции в модуле `return_loan`.
@@ -199,7 +199,7 @@
   (`reader_id`, `loan_id`, `kind`, `created_at`, `id` последним), критерии `about_loan`/`of_kind`,
   `NotificationsRepo` (`get_by_id`/`save`/`find`), `NotificationNotFound`. `check()` пустой: инвариантов
   у уведомления спецификация не задаёт, но репозиторий вызывает его как последний рубеж.
-- Домен `domain/notify_on_loan_issued.py`: `NotifyOnLoanIssued(hub, notifications, logger)` подписывается
+- Домен `domain/notify_on_loan_issued.py`: `NotifyOnLoanIssued(hub, notifications)` подписывается
   на `LoanIssued` в конструкторе; обработчик сохраняет `Notification(kind=loan_issued, created_at=date.today())`.
   `hub` - первый аргумент, как требует задача.
 - БД: `0002.add_notifications.sql` (`-- transactional: true`, `-- depends: 0001.init`) и `DDL.sql`
@@ -233,9 +233,9 @@
   несуществующая выдача.
 - HTTP: `ReadersResource.on_get` (`GET /library/readers`) и `LoansResource.on_get`
   (`GET /library/loans`); TypeAdapter на `Params` и `list[DTO]`, ответ 200. `create_app` не менялся -
-  маршруты уже были; ресурсы получили запросы в `composites/interfaces/api/resources/`, инстансы
+  маршруты уже были; ресурсы получили запросы в `composites/interfaces/web_api/resources/`, инстансы
   запросов и гейтвеев добавлены в `composites/{app/queries,infra/db/gateways}`, запросы без транзакции.
-- Композит/тесты: `tests/adapters/interfaces/api/conftest.py` собирает ресурсы с fake-запросами.
+- Композит/тесты: `tests/adapters/interfaces/web_api/conftest.py` собирает ресурсы с fake-запросами.
   Unit app - fake-гейтвеи, подмена `date` в модуле запроса (без freezegun), границы `limit`/`offset`;
   БД - счётчики активных/просроченных, все фильтры, дата запроса, пагинация, поля DTO; HTTP - 200/400
   на query; e2e - после выдачи и возврата списки читателей и выдач отражают состояние.
@@ -248,9 +248,9 @@
   Возвращает число новых; повторный запуск - 0. Своих ошибок команда не объявляет.
 - Композит: `composites/app/commands/remind_overdue_loans.py` - инстанс с `engine.transaction` на `run`
   (задача планировщика - самостоятельный вход в БД; прав у фоновой команды нет).
-- Точка входа `composites/interfaces/overdue_scheduler/`: `scheduler.py` с `CRON_SCHEDULE = '0 9 * * *'`,
-  `add_overdue_reminder(scheduler)` и `build_scheduler(scheduler)`; `__main__.py` только запускает
-  `build_scheduler(Scheduler()).run()`, поэтому импорт сборки безопасен.
+- Точка входа `composites/interfaces/overdue_scheduler/`: `scheduler.py` создаёт инстанс `Scheduler`
+  и регистрирует `remind_overdue_loans.run` по cron `'0 9 * * *'`; `__main__.py` только вызывает
+  `scheduler.run()`, поэтому импорт сборки безопасен.
 - Тесты: unit - просроченная/активная/возвращённая выдачи, дедупликация, `loan_issued` не мешает
   `loan_overdue`, счётчик; e2e - выдача через API, `UPDATE ... period_due = current_date - 1`, вызов
   инстанса композита, `loan_overdue` в `raw_db`, повтор - 0 и одна строка.

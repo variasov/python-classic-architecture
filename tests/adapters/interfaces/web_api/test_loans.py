@@ -1,0 +1,154 @@
+from typing import Any
+
+from falcon import testing
+
+from library.app.commands.domain.borrow_copy import (
+    LoanLimitReached,
+    ReaderHasOverdueLoans,
+)
+from library.app.commands.domain.copy import CopyNotAvailable
+from library.app.roles import PermissionDenied
+
+LOAN: dict[str, Any] = {'reader_id': 1, 'copy_id': 2}
+
+
+def test_find_loans_returns_200_and_list(
+    client: testing.TestClient,
+    find_loans_fake: Any,
+) -> None:
+    response = client.simulate_get(
+        '/library/loans',
+        params={
+            'reader_id': '4',
+            'only_overdue': 'true',
+            'only_active': 'true',
+            'limit': '5',
+            'offset': '1',
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json == [
+        {
+            'id': 7,
+            'reader_id': 4,
+            'copy_id': 2,
+            'start': '2026-03-01',
+            'due': '2026-03-15',
+            'returned_at': None,
+            'extensions_count': 1,
+        },
+    ]
+    assert find_loans_fake.calls == [
+        {
+            'reader_id': '4',
+            'only_overdue': 'true',
+            'only_active': 'true',
+            'limit': '5',
+            'offset': '1',
+        },
+    ]
+
+
+def test_find_loans_without_params_passes_empty_mapping(
+    client: testing.TestClient,
+    find_loans_fake: Any,
+) -> None:
+    client.simulate_get('/library/loans')
+
+    assert find_loans_fake.calls == [{}]
+
+
+def test_issue_loan_returns_201_and_id(client: testing.TestClient) -> None:
+    response = client.simulate_post(
+        '/library/loans',
+        headers={'X-User': 'admin'},
+        json=LOAN,
+    )
+
+    assert response.status_code == 201
+    assert response.json == {'id': 5}
+
+
+def test_request_body_is_passed_to_use_case(
+    client: testing.TestClient,
+    issue_loan_fake: Any,
+) -> None:
+    client.simulate_post(
+        '/library/loans',
+        headers={'X-User': 'admin'},
+        json=LOAN,
+    )
+
+    params, account = issue_loan_fake.calls[0]
+    assert params == LOAN
+    assert account.login == 'admin'
+
+
+def test_permission_denied_is_403(
+    client: testing.TestClient,
+    issue_loan_fake: Any,
+) -> None:
+    issue_loan_fake.error = PermissionDenied(
+        login='guest',
+        permission='loans.edit',
+    )
+
+    response = client.simulate_post(
+        '/library/loans',
+        headers={'X-User': 'guest'},
+        json=LOAN,
+    )
+
+    assert response.status_code == 403
+
+
+def test_unavailable_copy_is_422(
+    client: testing.TestClient,
+    issue_loan_fake: Any,
+) -> None:
+    issue_loan_fake.error = CopyNotAvailable(copy_id=2)
+
+    response = client.simulate_post(
+        '/library/loans',
+        headers={'X-User': 'admin'},
+        json=LOAN,
+    )
+
+    assert response.status_code == 422
+    detail = response.json[0]
+    assert detail['type'] == 'CopyNotAvailable'
+    assert detail['ctx'] == {'copy_id': 2}
+
+
+def test_loan_limit_is_422(
+    client: testing.TestClient,
+    issue_loan_fake: Any,
+) -> None:
+    issue_loan_fake.error = LoanLimitReached(reader_id=1, limit=3)
+
+    response = client.simulate_post(
+        '/library/loans',
+        headers={'X-User': 'admin'},
+        json=LOAN,
+    )
+
+    assert response.status_code == 422
+    assert response.json[0]['type'] == 'LoanLimitReached'
+    assert response.json[0]['ctx'] == {'reader_id': 1, 'limit': 3}
+
+
+def test_reader_with_overdue_loans_is_422(
+    client: testing.TestClient,
+    issue_loan_fake: Any,
+) -> None:
+    issue_loan_fake.error = ReaderHasOverdueLoans(reader_id=1)
+
+    response = client.simulate_post(
+        '/library/loans',
+        headers={'X-User': 'admin'},
+        json=LOAN,
+    )
+
+    assert response.status_code == 422
+    assert response.json[0]['type'] == 'ReaderHasOverdueLoans'

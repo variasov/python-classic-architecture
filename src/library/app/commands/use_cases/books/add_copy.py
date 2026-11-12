@@ -37,6 +37,13 @@ class AddCopyParams:
             raise ValueError(f'Полка должна быть не меньше {self.MIN_POSITION}')
 
 
+@dataclass(frozen=True)
+class CopyCreated:
+    """Контракт ответа на добавление экземпляра."""
+
+    id: int
+
+
 class AddCopy:
     """Добавление экземпляра книги."""
 
@@ -50,7 +57,7 @@ class AddCopy:
         self._copies = copies
         self._logger = logger
 
-    def run(self, params: AddCopyParams, account: Account) -> int:
+    def run(self, params: AddCopyParams, account: Account) -> CopyCreated:
         account.require(Permissions.BOOKS_EDIT)
         self._books.get_by_id(params.book_id)
         taken = self._copies.find(
@@ -70,4 +77,4 @@ class AddCopy:
         saved = self._copies.save(copy)
         assert saved.id is not None
         self._logger.info('Экземпляр добавлен: id=%s', saved.id)
-        return saved.id
+        return CopyCreated(id=saved.id)

@@ -1,4 +1,3 @@
-from collections.abc import Collection
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -18,7 +17,7 @@ class Account:
     """Пользователь, от имени которого выполняется действие."""
 
     login: str
-    permissions: Collection[str]
+    permissions: tuple[str, ...]
 
     def require(self, permission: str) -> None:
         if permission not in self.permissions:

@@ -1,5 +1,7 @@
 import logging
 
+import pydantic
+
 from library.app.commands.domain.borrow_copy import BorrowCopy
 from library.app.commands.use_cases.loans.issue_loan import IssueLoan
 from library.composites.app.hub import hub
@@ -17,4 +19,11 @@ borrow_copy = BorrowCopy(
     hub=hub,
 )
 issue_loan = IssueLoan(borrow_copy=borrow_copy, logger=logger)
-issue_loan.run = engine.transaction(issue_loan.run)  # pyright: ignore[reportAttributeAccessIssue]
+
+# fmt: off
+issue_loan.run = (
+    pydantic.validate_call(
+    engine.transaction(
+    issue_loan.run
+)))  # pyright: ignore[reportAttributeAccessIssue]
+# fmt: on

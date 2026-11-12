@@ -201,7 +201,7 @@ Usecase получает дату один раз и передаёт её во 
     404 → `None`; прочие коды и невалидный ответ → `IsbnCatalogUnavailable` (исключение интеграции);
   - `settings.py` - `IsbnCatalogSettings`: `ISBN_CATALOG_URL` (чувствительная, без дефолта),
     `ISBN_CATALOG_TIMEOUT` (обычная, дефолт 5 секунд).
-- Вызов `find` клиента оборачивается в композите аспектом повтора (`composites/aspects/retry.py`, tenacity).
+- Вызов `find` клиента оборачивается в композите аспектом повтора (`tenacity.retry(...)` напрямую в `composites/integrations/isbn_catalog/client.py`).
 
 ### Уведомления
 
@@ -223,7 +223,7 @@ Usecase получает дату один раз и передаёт её во 
   на него 403, а не 422.
 - Usecase с правами имеет сигнатуру `run(params: <UseCase>Params, account: Account)` и проверяет право
   первой строкой `run`, до обращений к хранилищу.
-- HTTP: middleware в `interfaces/api` строит `Account` из заголовка `X-User` по статической таблице
+- HTTP: middleware в `interfaces/web_api` строит `Account` из заголовка `X-User` по статической таблице
   пользователей из настроек (демо-аутентификация). Результат кладётся в `req.context.account`.
 
 ### Команды (`app/commands/use_cases/`)
@@ -328,7 +328,7 @@ Usecase получает дату один раз и передаёт её во 
 
 ## Процессы (точки входа в `composites/interfaces/`)
 
-- `api` - `python -m library.composites.interfaces.api`. Импортирует доменную реакцию
+- `web_api` - `python -m library.composites.interfaces.web_api`. Импортирует доменную реакцию
   `NotifyOnLoanIssued`, иначе событие `LoanIssued` потеряется.
 - `overdue_scheduler` - `classic-scheduler` по cron (`0 9 * * *`) вызывает `remind_overdue_loans.run`
   (инстанс из композита).
@@ -355,7 +355,7 @@ Usecase получает дату один раз и передаёт её во 
 - `tests/adapters/infra/db/` - репозитории, гейтвеи на тестовой PostgreSQL с миграциями через
   `classic.migrations`; каждый SQL-макрос критерия даёт ту же выборку, что `is_satisfied_by`;
   контрактные тесты репозиториев, параметризованные DB- и in-memory-реализацией;
-- `tests/adapters/interfaces/api/` - ресурсы через `falcon.testing.TestClient` и `create_app` с `FakeUseCase`:
+- `tests/adapters/interfaces/web_api/` - ресурсы через `falcon.testing.TestClient` и `create_app` с `FakeUseCase`:
   разбор запроса в `Params`, коды 200/201, 400, 403, 422, 404 на неизвестный URL;
 - `tests/adapters/integrations/isbn_catalog/` - клиент против `pytest-httpserver`: перевод ответа в
   `CatalogBook`, 404 → `None`, ошибка HTTP и невалидный ответ → `IsbnCatalogUnavailable`, отправленный запрос;

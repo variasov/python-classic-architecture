@@ -1,5 +1,7 @@
 import logging
 
+import pydantic
+
 from library.app.commands.use_cases.books.create_book_from_catalog import (
     CreateBookFromCatalog,
 )
@@ -14,6 +16,11 @@ create_book_from_catalog = CreateBookFromCatalog(
     catalog=isbn_catalog_client,
     logger=logger,
 )
-create_book_from_catalog.run = engine.transaction(  # pyright: ignore[reportAttributeAccessIssue]
-    create_book_from_catalog.run,
-)
+
+# fmt: off
+create_book_from_catalog.run = (
+    pydantic.validate_call(
+    engine.transaction(
+    create_book_from_catalog.run
+)))  # pyright: ignore[reportAttributeAccessIssue]
+# fmt: on

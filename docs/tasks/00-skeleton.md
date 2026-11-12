@@ -19,9 +19,9 @@ HTTP-приложение с обработкой ошибок, композит
 - `app/commands/domain/errors.py` (`DomainError`).
 - `infra/db/`: `settings.py`, `constants.py`, `sql/migrations/0001.init.sql` (пока только схема
   `library`), `sql/schema/DDL.sql`.
-- `interfaces/api/`: `create_app` (обработчики ошибок 400/403/422, middleware `X-User` → `Account`),
+- `interfaces/web_api/`: `create_app` (обработчики ошибок 400/403/422, middleware `X-User` → `Account`),
   настройки API с таблицей пользователей.
-- `composites/`: настройки, `Engine`, `Hub`, точка входа `interfaces/api` (`__main__.py`).
+- `composites/`: настройки, `Engine`, `Hub`, точка входа `interfaces/web_api` (`__main__.py`).
 - `tests/conftest.py` (загрузка тестовых настроек), фикстуры тестовой БД
   (`migrated_db`, `db_engine`, `raw_db`) по `python-classic-adapters-sql-db/references/testing.md`.
 

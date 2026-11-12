@@ -56,12 +56,12 @@ def test_adds_copy(
     add_copy_params: Callable[..., AddCopyParams],
 ) -> None:
     assert books_with_one.id is not None
-    copy_id = add_copy.run(
+    created = add_copy.run(
         add_copy_params(book_id=books_with_one.id),
         admin,
     )
 
-    saved = copies_repo.get_by_id(copy_id)
+    saved = copies_repo.get_by_id(created.id)
     assert saved.inventory_number == 'INV-001'
     assert saved.shelf.hall == 'Читальный зал'
     assert saved.is_available is True

@@ -22,6 +22,13 @@ class RegisterReaderParams:
     valid_until: date
 
 
+@dataclass(frozen=True)
+class ReaderCreated:
+    """Контракт ответа на регистрацию читателя."""
+
+    id: int
+
+
 class RegisterReader:
     """Регистрация читателя."""
 
@@ -29,7 +36,7 @@ class RegisterReader:
         self._readers = readers
         self._logger = logger
 
-    def run(self, params: RegisterReaderParams, account: Account) -> int:
+    def run(self, params: RegisterReaderParams, account: Account) -> ReaderCreated:
         account.require(Permissions.READERS_EDIT)
         reader = Reader(
             full_name=params.full_name,
@@ -39,4 +46,4 @@ class RegisterReader:
         saved = self._readers.save(reader)
         assert saved.id is not None
         self._logger.info('Читатель зарегистрирован: id=%s', saved.id)
-        return saved.id
+        return ReaderCreated(id=saved.id)

@@ -28,7 +28,7 @@ def test_env(
 
 @pytest.fixture(scope='session')
 def api_app(test_env: None) -> falcon.App[Any, Any]:
-    from library.composites.interfaces.api import wsgi
+    from library.composites.interfaces.web_api import wsgi
 
     return wsgi.app
 

@@ -124,12 +124,12 @@ def test_issues_loan_for_today(
     loans_repo: LoansRepo,
     copies_repo: CopiesRepo,
 ) -> None:
-    loan_id = issue_loan.run(
+    created = issue_loan.run(
         issue_loan_params(reader_id=_id(reader), copy_id=_id(copy)),
         loans_account,
     )
 
-    loan = loans_repo.get_by_id(loan_id)
+    loan = loans_repo.get_by_id(created.id)
     assert loan.reader_id == reader.id
     assert loan.copy_id == copy.id
     assert loan.period == LoanPeriod(
@@ -147,13 +147,13 @@ def test_emits_loan_issued(
     copy: Copy,
     received: list[LoanIssued],
 ) -> None:
-    loan_id = issue_loan.run(
+    created = issue_loan.run(
         issue_loan_params(reader_id=_id(reader), copy_id=_id(copy)),
         loans_account,
     )
 
     assert received == [
-        LoanIssued(loan_id=loan_id, reader_id=_id(reader)),
+        LoanIssued(loan_id=created.id, reader_id=_id(reader)),
     ]
 
 

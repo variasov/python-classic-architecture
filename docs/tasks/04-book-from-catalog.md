@@ -15,7 +15,7 @@
   `IsbnCatalog` (ABC), `CatalogBook`, `BookNotInCatalog`.
 - Интеграция: `integrations/isbn_catalog/client.py` (`CatalogBookPayload`, `IsbnCatalogClient`,
   `IsbnCatalogUnavailable`), `settings.py` (`IsbnCatalogSettings`).
-- Композит: `composites/aspects/retry.py` (tenacity) на `find` клиента, сборка, транзакция, ресурс.
+- Композит: `tenacity.retry(...)` на `find` клиента (в `composites/integrations/isbn_catalog/client.py`), сборка, транзакция, ресурс.
 - HTTP: ресурс `/library/catalog_books` `POST` → 201.
 
 ## Критерии приёмки

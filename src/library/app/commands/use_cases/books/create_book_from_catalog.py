@@ -43,6 +43,13 @@ class BookNotInCatalog(AppError):
         return f'Книга с ISBN {self.isbn} не найдена в каталоге'
 
 
+@dataclass(frozen=True)
+class CatalogBookCreated:
+    """Контракт ответа на создание книги из каталога."""
+
+    id: int
+
+
 class CreateBookFromCatalog:
     """Создание книги по описанию из внешнего каталога ISBN."""
 
@@ -56,7 +63,9 @@ class CreateBookFromCatalog:
         self._catalog = catalog
         self._logger = logger
 
-    def run(self, params: CreateBookFromCatalogParams, account: Account) -> int:
+    def run(
+        self, params: CreateBookFromCatalogParams, account: Account
+    ) -> CatalogBookCreated:
         account.require(Permissions.BOOKS_EDIT)
         found = self._catalog.find(params.isbn)
         if found is None:
@@ -70,4 +79,4 @@ class CreateBookFromCatalog:
         saved = self._books.save(book)
         assert saved.id is not None
         self._logger.info('Книга создана из каталога: id=%s', saved.id)
-        return saved.id
+        return CatalogBookCreated(id=saved.id)

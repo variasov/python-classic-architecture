@@ -32,12 +32,12 @@ def test_creates_book_from_catalog(
         year=1869,
     )
 
-    book_id = create_book_from_catalog.run(
+    created = create_book_from_catalog.run(
         create_book_from_catalog_params(isbn=ISBN),
         admin,
     )
 
-    saved = books_repo.get_by_id(book_id)
+    saved = books_repo.get_by_id(created.id)
     assert saved.isbn == ISBN
     assert saved.title == 'Война и мир'
     assert saved.authors == ['Лев Толстой']

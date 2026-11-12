@@ -14,6 +14,13 @@ class IssueLoanParams:
     copy_id: int
 
 
+@dataclass(frozen=True)
+class LoanCreated:
+    """Контракт ответа на выдачу экземпляра."""
+
+    id: int
+
+
 class IssueLoan:
     """Выдача экземпляра читателю."""
 
@@ -21,7 +28,7 @@ class IssueLoan:
         self._borrow_copy = borrow_copy
         self._logger = logger
 
-    def run(self, params: IssueLoanParams, account: Account) -> int:
+    def run(self, params: IssueLoanParams, account: Account) -> LoanCreated:
         account.require(Permissions.LOANS_EDIT)
         loan = self._borrow_copy.run(
             reader_id=params.reader_id,
@@ -35,4 +42,4 @@ class IssueLoan:
             loan.reader_id,
             loan.copy_id,
         )
-        return loan.id
+        return LoanCreated(id=loan.id)

@@ -57,9 +57,9 @@ def test_registers_reader(
     admin: Account,
     register_reader_params: Callable[..., RegisterReaderParams],
 ) -> None:
-    reader_id = register_reader.run(register_reader_params(), admin)
+    created = register_reader.run(register_reader_params(), admin)
 
-    saved = readers_repo.get_by_id(reader_id)
+    saved = readers_repo.get_by_id(created.id)
     assert saved.full_name == 'Иван Петров'
     assert saved.contact == Contact(
         email='ivan@example.com',
@@ -75,9 +75,9 @@ def test_phone_can_be_absent(
     admin: Account,
     register_reader_params: Callable[..., RegisterReaderParams],
 ) -> None:
-    reader_id = register_reader.run(register_reader_params(phone=None), admin)
+    created = register_reader.run(register_reader_params(phone=None), admin)
 
-    assert readers_repo.get_by_id(reader_id).contact.phone is None
+    assert readers_repo.get_by_id(created.id).contact.phone is None
 
 
 def test_requires_permission(

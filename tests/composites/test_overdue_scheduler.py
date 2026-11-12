@@ -1,7 +1,6 @@
 from datetime import date
-from typing import Any, cast
+from typing import Any
 
-from classic.scheduler import Scheduler
 from classic.scheduler.task import CronTask
 from falcon import testing
 
@@ -28,60 +27,21 @@ READER: dict[str, Any] = {
 }
 
 
-class FakeScheduler:
-    """Планировщик-заглушка: записывает зарегистрированные задачи."""
-
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, object]] = []
-
-    def by_cron(
-        self,
-        schedule: str,
-        job: object,
-        args: tuple[Any, ...] | None = None,
-        kwargs: dict[str, Any] | None = None,
-        tz: Any = None,
-    ) -> object:
-        self.calls.append((schedule, job))
-        return object()
-
-
-def _queued_tasks(scheduler: Scheduler) -> list[object]:
-    tasks: list[object] = []
-    while not scheduler._inbox.empty():
-        tasks.append(scheduler._inbox.get_nowait())
-    return tasks
-
-
-def test_build_scheduler_registers_daily_cron_job(test_env: None) -> None:
-    from library.composites.interfaces.overdue_scheduler.scheduler import (
-        CRON_SCHEDULE,
-        build_scheduler,
-    )
-
-    scheduler = build_scheduler(Scheduler())
-
-    tasks = _queued_tasks(scheduler)
-    assert len(tasks) == 1
-    task = tasks[0]
-    assert isinstance(task, CronTask)
-    assert task._schedule.expressions == CRON_SCHEDULE.split()
-
-
-def test_build_scheduler_registers_remind_overdue_command(test_env: None) -> None:
+def test_scheduler_registers_daily_overdue_reminder(test_env: None) -> None:
     from library.composites.app.commands.remind_overdue_loans import (
         remind_overdue_loans,
     )
     from library.composites.interfaces.overdue_scheduler.scheduler import (
-        CRON_SCHEDULE,
-        build_scheduler,
+        scheduler,
     )
 
-    fake = FakeScheduler()
-    scheduler = build_scheduler(cast('Scheduler', fake))
+    tasks = list(scheduler._inbox.queue)
 
-    assert scheduler is fake
-    assert fake.calls == [(CRON_SCHEDULE, remind_overdue_loans.run)]
+    assert len(tasks) == 1
+    task = tasks[0]
+    assert isinstance(task, CronTask)
+    assert task._schedule.expressions == ['0', '9', '*', '*', '*']
+    assert task._job == remind_overdue_loans.run
 
 
 def test_scheduler_creates_overdue_notification_once(

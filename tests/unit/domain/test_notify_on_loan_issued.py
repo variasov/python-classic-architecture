@@ -1,4 +1,3 @@
-import logging
 from datetime import date
 
 import pytest
@@ -33,7 +32,6 @@ def reaction(
     return NotifyOnLoanIssued(
         hub=hub,
         notifications=notifications_repo,
-        logger=logging.getLogger('test'),
     )
 
 

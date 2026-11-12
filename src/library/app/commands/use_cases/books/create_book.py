@@ -21,6 +21,13 @@ class CreateBookParams:
             raise ValueError('ISBN должен состоять из 13 символов')
 
 
+@dataclass(frozen=True)
+class BookCreated:
+    """Контракт ответа на создание книги."""
+
+    id: int
+
+
 class CreateBook:
     """Создание книги."""
 
@@ -28,7 +35,7 @@ class CreateBook:
         self._books = books
         self._logger = logger
 
-    def run(self, params: CreateBookParams, account: Account) -> int:
+    def run(self, params: CreateBookParams, account: Account) -> BookCreated:
         account.require(Permissions.BOOKS_EDIT)
         book = Book(
             isbn=params.isbn,
@@ -39,4 +46,4 @@ class CreateBook:
         saved = self._books.save(book)
         assert saved.id is not None
         self._logger.info('Книга создана: id=%s', saved.id)
-        return saved.id
+        return BookCreated(id=saved.id)
