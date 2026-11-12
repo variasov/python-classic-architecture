@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 from classic.scheduler import Scheduler
 
 scheduler = Scheduler(tz=ZoneInfo('Europe/Moscow'))   # workers_num=1; tz - для cron-задач
-job = scheduler.by_cron('0 9 * * *', lambda: hub.notify(DailyCheck()))
+job = scheduler.by_cron('0 9 * * *', remind_overdue_loans.run)
 scheduler.run()                    # блокирует поток до stop() или Ctrl+C
 ```
 
@@ -37,6 +37,6 @@ scheduler.run()                    # блокирует поток до stop() �
 - После `stop()` можно запустить снова, задачи сохраняются.
 
 ## Тесты
-- Задачу проверяют, вызывая её `job` напрямую (вынеси job в именованную функцию/метод композита), а не ожидая срабатывания расписания.
+- Задачу проверяют, вызывая её `job` напрямую (метод usecase из композита), а не ожидая срабатывания расписания.
 - Публичного списка задач нет. Регистрацию проверяй через собственную функцию сборки, принимающую `Scheduler`: в тесте передай fake с `by_cron`, записывающим вызовы.
 - Если всё же нужен запуск: `start()` + короткий `with_delay` + `stop(block=True, timeout=...)`.
