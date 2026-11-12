@@ -151,20 +151,20 @@
   `MAX_EXTENSIONS=2`), рекурсивный `check()`, критерии `overdue`/`returned`/`due_within`/`of_reader`,
   `LoansRepo`, ошибки `LoanPeriodInvalid`, `TooManyExtensions`, `ExtensionNotForward`,
   `LoanReturnedBeforeIssue`, `LoanNotFound`. Поведение `extend`/`close` не добавлялось - задача 08.
-- `domain/events.py` - `LoanIssued(loan_id, reader_id)`; `domain/borrow_copy.py` - `BorrowCopy`
+- `commands/signals.py` - `LoanIssued(loan_id, reader_id)`; `domain/borrow_copy.py` - `BorrowCopy`
   с проверками `ReaderCannotBorrow`/`LoanLimitReached`/`ReaderHasOverdueLoans`/`CopyNotAvailable`,
-  сроком `on + 14 дней`, событием через `Hub`.
-- App: `commands/loans/issue_loan.py` (`IssueLoanParams`, право `loans.edit` первой строкой,
+  сроком `on + 14 дней`, без `Hub`; сигнал `LoanIssued` испускает `IssueLoan`.
+- App: `commands/loans/issue_loan.py` (`hub`, `IssueLoanParams`, право `loans.edit` первой строкой,
   `date.today()`, возврат id).
 - БД: `library.loans` и `library.loan_extensions` в `0001.init.sql` и `DDL.sql`;
   `aggregates/loans/{get_by_id,insert,update,delete_extensions,insert_extensions}.sql`,
   `find.sql.tmpl`, `criteria.sql.tmpl`; `DbLoansRepo` (`period=Assign('period')`,
   `extensions=Append('extension')`, продления - delete+insert с `position` 0-based).
 - HTTP/композит: `LoansResource.on_post` (`POST /library/loans` -> 201 `{"id"}`), маршрут в
-  `create_app`, инстансы в `composites/.../loans.py`. `BorrowCopy` собран с репозиториями и
-  `composites/app/hub.py`; `engine.transaction` только на `issue_loan.run`.
+  `create_app`, инстансы в `composites/.../loans.py`. `BorrowCopy` собран с репозиториями,
+  `IssueLoan` - с `BorrowCopy` и `composites/app/hub.py`; `engine.transaction` только на `issue_loan.run`.
 - Тесты: домен (инварианты, критерии в обеих формах/комбинациях, hypothesis на даты), `BorrowCopy`
-  (каждая проверка, срок, событие, сохранение экземпляра), команда с правами, адаптер
+  (каждая проверка, срок, сохранение экземпляра), команда с правами и сигналом `LoanIssued`, адаптер
   (контракт DB+in-memory, roundtrip/порядок/обновление продлений, каждый SQL-макрос сверен с
   `is_satisfied_by`), HTTP 201/400/403/422, e2e книга+экземпляр+читатель -> 201 -> повтор 422.
 - Отклонения: в маппинге ключ отношения - имя поля, поэтому `extensions=Append('extension')`
@@ -199,7 +199,7 @@
   (`reader_id`, `loan_id`, `kind`, `created_at`, `id` последним), критерии `about_loan`/`of_kind`,
   `NotificationsRepo` (`get_by_id`/`save`/`find`), `NotificationNotFound`. `check()` пустой: инвариантов
   у уведомления спецификация не задаёт, но репозиторий вызывает его как последний рубеж.
-- Домен `domain/notify_on_loan_issued.py`: `NotifyOnLoanIssued(hub, notifications)` подписывается
+- App `commands/loans/notify_on_loan_issued.py`: `NotifyOnLoanIssued(hub, notifications)` подписывается
   на `LoanIssued` в конструкторе; обработчик сохраняет `Notification(kind=loan_issued, created_at=date.today())`.
   `hub` - первый аргумент, как требует задача.
 - БД: `0002.add_notifications.sql` (`-- transactional: true`, `-- depends: 0001.init`) и `DDL.sql`
@@ -207,7 +207,7 @@
   `aggregates/notifications/{get_by_id,insert,update,find,criteria}`; `DbNotificationsRepo`.
   `kind` в БД - text: `NotificationKind.value` при записи, обратное преобразование - фабрика `_notification`
   в `Entity(_notification, 'id')` (стандартный маппинг не умеет Enum).
-- Композит: `composites/infra/db/repos/notifications.py`, `composites/app/domain/notify_on_loan_issued.py`
+- Композит: `composites/infra/db/repos/notifications.py`, `composites/app/commands/loans/notify_on_loan_issued.py`
   (инстанс на общем `hub`), `wsgi.py` импортирует реакцию явным re-export до сборки `app`.
 - Тесты: критерии домена в обеих формах и комбинациях; реакция со своим `Hub` и in-memory репозиторием
   (подписка в конструкторе, поля и `created_at=date.today()`); контракт DB+in-memory, roundtrip Enum,

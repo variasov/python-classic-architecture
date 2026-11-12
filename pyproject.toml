@@ -157,8 +157,6 @@ ignore_imports = [
     "library.app.domain.** -> typing",
     "library.app.domain.** -> classic.criteria",
     "library.app.domain.** -> classic.criteria.**",
-    "library.app.domain.** -> classic.signals",
-    "library.app.domain.** -> classic.signals.**",
 ]
 
 [[tool.importlinter.contracts]]

@@ -151,15 +151,15 @@ Usecase получает дату один раз и передаёт её во 
 
 Ошибки репозитория: `NotificationNotFound(id)`.
 
-### Доменные события
+### Сигналы
 
-Контракты событий - в `app/domain/events.py`:
-- `LoanIssued(loan_id: int, reader_id: int)` - выдача оформлена. Это понятие предметной
-  области, поэтому событие испускает сам домен (доменный usecase `BorrowCopy`).
+Контракты сигналов - в `app/commands/signals.py`:
+- `LoanIssued(loan_id: int, reader_id: int)` - выдача оформлена. Домен сигналов не знает:
+  сигнал испускает команда `IssueLoan` после вызова доменного `BorrowCopy`.
 
 ### Доменные usecase (работают с несколькими агрегатами)
 
-`BorrowCopy` выдаёт экземпляр читателю. Зависимости: `ReadersRepo`, `CopiesRepo`, `LoansRepo`, `Hub`.
+`BorrowCopy` выдаёт экземпляр читателю. Зависимости: `ReadersRepo`, `CopiesRepo`, `LoansRepo`.
 `run(reader_id, copy_id, on) -> Loan`.
 
 Проверки:
@@ -183,9 +183,9 @@ Usecase получает дату один раз и передаёт её во 
 - `copy.give_back()`;
 - сохранение обоих агрегатов.
 
-`NotifyOnLoanIssued` - доменная реакция на `LoanIssued`. Зависимости: `NotificationsRepo`, `Hub`.
+`NotifyOnLoanIssued` - реакция на `LoanIssued`, класс в `app/commands/loans/`. Зависимости: `NotificationsRepo`, `Hub`.
 Подписывается в конструкторе, на каждое событие сохраняет `Notification(kind=loan_issued, created_at=date.today())`.
-Выполняется синхронно, в транзакции команды, испустившей событие.
+Выполняется синхронно, в транзакции команды, испустившей сигнал.
 
 ### Внешняя система: каталог ISBN (integration)
 
@@ -205,7 +205,7 @@ Usecase получает дату один раз и передаёт её во 
 
 ### Уведомления
 
-- О выдаче: доменная реакция `NotifyOnLoanIssued` на событие `LoanIssued`.
+- О выдаче: реакция `NotifyOnLoanIssued` на сигнал `LoanIssued`.
 - О просрочке: команда `RemindOverdueLoans`, её запускает планировщик (см. «Процессы»).
 
 ## Сценарии
@@ -255,7 +255,8 @@ Usecase получает дату один раз и передаёт её во 
 - `RegisterReader`: собирает `Reader`, сохраняет.
 - `ExtendMembership`: `get_by_id`, `reader.extend_membership(until)`, сохраняет.
 - `BlockReader` / `UnblockReader`: `get_by_id`, `block()` / `unblock()`, сохраняет.
-- `IssueLoan`: вызывает доменный `BorrowCopy.run(reader_id, copy_id, on=date.today())`.
+- `IssueLoan`: вызывает доменный `BorrowCopy.run(reader_id, copy_id, on=date.today())`,
+  затем испускает `LoanIssued` через `Hub`.
 - `ExtendLoan`: `get_by_id`, `loan.extend(on=date.today(), days)`, сохраняет.
 - `ReturnLoan`: вызывает доменный `ReturnCopy.run(loan_id, on=date.today())`.
 - `RemindOverdueLoans`: `on = date.today()`; находит выдачи `Loan.overdue(on=on)`; для каждой,
@@ -328,13 +329,13 @@ Usecase получает дату один раз и передаёт её во 
 
 ## Процессы (точки входа в `composites/interfaces/`)
 
-- `web_api` - `python -m library.composites.interfaces.web_api`. Импортирует доменную реакцию
-  `NotifyOnLoanIssued`, иначе событие `LoanIssued` потеряется.
+- `web_api` - `python -m library.composites.interfaces.web_api`. Импортирует реакцию
+  `NotifyOnLoanIssued`, иначе сигнал `LoanIssued` потеряется.
 - `overdue_scheduler` - `classic-scheduler` по cron (`0 9 * * *`) вызывает `remind_overdue_loans.run`
   (инстанс из композита).
 
 Транзакции навешиваются в композите на `run` каждой команды и на `run` команды в задаче планировщика.
-Доменные usecase и реакции работают в транзакции вызвавшей команды и отдельно не оборачиваются.
+Доменные usecase и реакции (классы в `commands/`) работают в транзакции вызвавшей команды и отдельно не оборачиваются.
 Запросы работают в автокоммите.
 
 ## Окружение для разработки и тестов
@@ -351,7 +352,7 @@ Usecase получает дату один раз и передаёт её во 
   hypothesis и «почти валидные» входы; время, если нужно, замораживается `freezegun`;
 - `tests/unit/app/` - по файлу на usecase: команды и запросы с in-memory репозиториями, гейтвеями
   и `FakeIsbnCatalog` (реализует ABC из app), без БД и сети; время - `freezegun`; проверки `Params`
-  на границах, права (`PermissionDenied`), испущенные события;
+  на границах, права (`PermissionDenied`), испущенные сигналы;
 - `tests/adapters/infra/db/` - репозитории, гейтвеи на тестовой PostgreSQL с миграциями через
   `classic.migrations`; каждый SQL-макрос критерия даёт ту же выборку, что `is_satisfied_by`;
   контрактные тесты репозиториев, параметризованные DB- и in-memory-реализацией;

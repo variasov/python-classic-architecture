@@ -3,7 +3,7 @@ from typing import Any
 import falcon
 
 # Импорт модуля реакции подписывает её на общий hub до первого notify.
-from library.composites.app.domain.notify_on_loan_issued import (
+from library.composites.app.commands.loans.notify_on_loan_issued import (
     notify_on_loan_issued as notify_on_loan_issued,
 )
 from library.composites.interfaces.web_api.resources.book import book

@@ -10,13 +10,13 @@ from library.app.commands.loans.issue_loan import (
     IssueLoan,
     IssueLoanParams,
 )
+from library.app.commands.signals import LoanIssued
 from library.app.domain.borrow_copy import (
     BorrowCopy,
     LoanLimitReached,
     ReaderCannotBorrow,
 )
 from library.app.domain.copy import CopiesRepo, Copy
-from library.app.domain.events import LoanIssued
 from library.app.domain.loan import Loan, LoanPeriod, LoansRepo
 from library.app.domain.reader import (
     Membership,
@@ -61,19 +61,21 @@ def borrow_copy(
     readers_repo: ReadersRepo,
     copies_repo: CopiesRepo,
     loans_repo: LoansRepo,
-    hub: Hub,
 ) -> BorrowCopy:
     return BorrowCopy(
         readers=readers_repo,
         copies=copies_repo,
         loans=loans_repo,
-        hub=hub,
     )
 
 
 @pytest.fixture
-def issue_loan(borrow_copy: BorrowCopy) -> IssueLoan:
-    return IssueLoan(borrow_copy=borrow_copy, logger=logging.getLogger('test'))
+def issue_loan(borrow_copy: BorrowCopy, hub: Hub) -> IssueLoan:
+    return IssueLoan(
+        borrow_copy=borrow_copy,
+        hub=hub,
+        logger=logging.getLogger('test'),
+    )
 
 
 @pytest.fixture
@@ -165,6 +167,7 @@ def test_requires_permission_before_storage(
     copy: Copy,
     loans_repo: LoansRepo,
     copies_repo: CopiesRepo,
+    received: list[LoanIssued],
 ) -> None:
     with pytest.raises(PermissionDenied):
         issue_loan.run(
@@ -174,6 +177,7 @@ def test_requires_permission_before_storage(
 
     assert loans_repo.find(ReturnsTrue()) == []
     assert copies_repo.get_by_id(_id(copy)).is_available is True
+    assert received == []
 
 
 def test_blocked_reader_is_rejected(

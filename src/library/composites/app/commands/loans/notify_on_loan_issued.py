@@ -1,4 +1,4 @@
-from library.app.domain.notify_on_loan_issued import NotifyOnLoanIssued
+from library.app.commands.loans.notify_on_loan_issued import NotifyOnLoanIssued
 from library.composites.app.hub import hub
 from library.composites.infra.db.repos.notifications import notifications_repo
 

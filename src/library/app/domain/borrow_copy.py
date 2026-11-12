@@ -1,11 +1,8 @@
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from classic.signals import Hub
-
 from library.app.domain.copy import CopiesRepo
 from library.app.domain.errors import DomainError
-from library.app.domain.events import LoanIssued
 from library.app.domain.loan import Loan, LoanPeriod, LoansRepo
 from library.app.domain.reader import ReadersRepo
 
@@ -43,12 +40,10 @@ class BorrowCopy:
         readers: ReadersRepo,
         copies: CopiesRepo,
         loans: LoansRepo,
-        hub: Hub,
     ) -> None:
         self._readers = readers
         self._copies = copies
         self._loans = loans
-        self._hub = hub
 
     def run(self, reader_id: int, copy_id: int, on: date) -> Loan:
         reader = self._readers.get_by_id(reader_id)
@@ -84,6 +79,4 @@ class BorrowCopy:
             ),
         )
         self._loans.save(loan)
-        assert loan.id is not None
-        self._hub.notify(LoanIssued(loan_id=loan.id, reader_id=reader.id))
         return loan

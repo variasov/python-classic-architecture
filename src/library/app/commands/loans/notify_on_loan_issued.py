@@ -2,7 +2,7 @@ from datetime import date
 
 from classic.signals import Hub
 
-from library.app.domain.events import LoanIssued
+from library.app.commands.signals import LoanIssued
 from library.app.domain.notification import (
     Notification,
     NotificationKind,

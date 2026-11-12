@@ -3,7 +3,6 @@ from datetime import date, timedelta
 
 import pytest
 from classic.criteria import ReturnsTrue
-from classic.signals import Hub
 
 from library.app.domain.borrow_copy import (
     BorrowCopy,
@@ -12,7 +11,6 @@ from library.app.domain.borrow_copy import (
     ReaderHasOverdueLoans,
 )
 from library.app.domain.copy import CopiesRepo, Copy, CopyNotAvailable
-from library.app.domain.events import LoanIssued
 from library.app.domain.loan import (
     Loan,
     LoanPeriod,
@@ -45,29 +43,15 @@ def loans_repo(in_memory_loans_repo: LoansRepo) -> LoansRepo:
 
 
 @pytest.fixture
-def received() -> list[LoanIssued]:
-    return []
-
-
-@pytest.fixture
-def hub(received: list[LoanIssued]) -> Hub:
-    hub = Hub()
-    hub.add_reaction(LoanIssued, received.append)
-    return hub
-
-
-@pytest.fixture
 def borrow_copy(
     readers_repo: ReadersRepo,
     copies_repo: CopiesRepo,
     loans_repo: LoansRepo,
-    hub: Hub,
 ) -> BorrowCopy:
     return BorrowCopy(
         readers=readers_repo,
         copies=copies_repo,
         loans=loans_repo,
-        hub=hub,
     )
 
 
@@ -104,13 +88,12 @@ def _active_loan(
     )
 
 
-def test_issues_copy_and_emits_event(
+def test_issues_copy(
     borrow_copy: BorrowCopy,
     reader: Reader,
     copy: Copy,
     loans_repo: LoansRepo,
     copies_repo: CopiesRepo,
-    received: list[LoanIssued],
 ) -> None:
     loan = borrow_copy.run(
         reader_id=_id(reader),
@@ -129,9 +112,6 @@ def test_issues_copy_and_emits_event(
     assert loan.extensions == []
     assert loans_repo.get_by_id(loan.id) == loan
     assert copies_repo.get_by_id(_id(copy)).is_available is False
-    assert received == [
-        LoanIssued(loan_id=loan.id, reader_id=_id(reader)),
-    ]
 
 
 def test_inactive_membership_is_rejected(
@@ -141,7 +121,6 @@ def test_inactive_membership_is_rejected(
     copy: Copy,
     copies_repo: CopiesRepo,
     loans_repo: LoansRepo,
-    received: list[LoanIssued],
 ) -> None:
     reader = readers_repo.save(
         reader_factory(
@@ -154,7 +133,6 @@ def test_inactive_membership_is_rejected(
 
     assert copies_repo.get_by_id(_id(copy)).is_available is True
     assert loans_repo.find(ReturnsTrue()) == []
-    assert received == []
 
 
 def test_blocked_reader_is_rejected(
@@ -164,7 +142,6 @@ def test_blocked_reader_is_rejected(
     copy: Copy,
     copies_repo: CopiesRepo,
     loans_repo: LoansRepo,
-    received: list[LoanIssued],
 ) -> None:
     reader = readers_repo.save(reader_factory(is_blocked=True))
 
@@ -173,7 +150,6 @@ def test_blocked_reader_is_rejected(
 
     assert copies_repo.get_by_id(_id(copy)).is_available is True
     assert loans_repo.find(ReturnsTrue()) == []
-    assert received == []
 
 
 def test_loan_limit_is_reached(
@@ -183,7 +159,6 @@ def test_loan_limit_is_reached(
     copy: Copy,
     copies_repo: CopiesRepo,
     loans_repo: LoansRepo,
-    received: list[LoanIssued],
 ) -> None:
     for copy_index in range(reader.membership.loan_limit):
         loans_repo.save(
@@ -200,7 +175,6 @@ def test_loan_limit_is_reached(
     assert error.value.limit == 3
     assert copies_repo.get_by_id(_id(copy)).is_available is True
     assert len(loans_repo.find(ReturnsTrue())) == 3
-    assert received == []
 
 
 def test_returned_loans_do_not_count_towards_limit(
@@ -209,7 +183,6 @@ def test_returned_loans_do_not_count_towards_limit(
     reader: Reader,
     copy: Copy,
     loans_repo: LoansRepo,
-    received: list[LoanIssued],
 ) -> None:
     for copy_index in range(reader.membership.loan_limit):
         loans_repo.save(
@@ -229,9 +202,6 @@ def test_returned_loans_do_not_count_towards_limit(
     )
 
     assert loan.id is not None
-    assert received == [
-        LoanIssued(loan_id=loan.id, reader_id=_id(reader)),
-    ]
 
 
 def test_overdue_loans_are_rejected(
@@ -241,7 +211,6 @@ def test_overdue_loans_are_rejected(
     copy: Copy,
     copies_repo: CopiesRepo,
     loans_repo: LoansRepo,
-    received: list[LoanIssued],
 ) -> None:
     loans_repo.save(
         _active_loan(
@@ -256,7 +225,6 @@ def test_overdue_loans_are_rejected(
         borrow_copy.run(reader_id=_id(reader), copy_id=_id(copy), on=TODAY)
 
     assert copies_repo.get_by_id(_id(copy)).is_available is True
-    assert received == []
 
 
 def test_returned_overdue_loan_does_not_block(
@@ -316,7 +284,6 @@ def test_unavailable_copy_is_rejected(
     copy_factory: Callable[..., Copy],
     copies_repo: CopiesRepo,
     loans_repo: LoansRepo,
-    received: list[LoanIssued],
 ) -> None:
     unavailable = copies_repo.save(copy_factory(is_available=False))
 
@@ -328,4 +295,3 @@ def test_unavailable_copy_is_rejected(
         )
 
     assert loans_repo.find(ReturnsTrue()) == []
-    assert received == []

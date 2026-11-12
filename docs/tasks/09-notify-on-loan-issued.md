@@ -3,24 +3,24 @@
 При выдаче экземпляра читателю сохраняется уведомление `loan_issued`.
 
 ## Спецификация
-- «Агрегат „Уведомление“ (`Notification`)»; доменная реакция `NotifyOnLoanIssued`; «Уведомления»;
+- «Агрегат „Уведомление“ (`Notification`)»; реакция `NotifyOnLoanIssued`; «Уведомления»;
   «Хранилище» - таблица `notifications`, миграция `0002.add_notifications`; «Процессы» - `api`
   импортирует реакцию.
 
 ## Скиллы
-`python-classic-domain` + `classic-criteria`, `classic-signals`, `python-classic-adapters-sql-db`
+`python-classic-domain` + `classic-criteria`, `python-classic-app` + `classic-signals`, `python-classic-adapters-sql-db`
 + `classic-db-tools` + `classic-migrations`, `python-classic-composite`.
 
 ## Сделать
-- Домен: `Notification`, `NotificationKind`, критерии, `NotificationsRepo`, `NotificationNotFound`;
-  реакция `NotifyOnLoanIssued` (подписка в конструкторе).
+- Домен: `Notification`, `NotificationKind`, критерии, `NotificationsRepo`, `NotificationNotFound`.
+- App: реакция `commands/loans/notify_on_loan_issued.py` - `NotifyOnLoanIssued` (подписка в конструкторе).
 - БД: `0002.add_notifications.sql` (`-- depends: 0001.init`), `DDL.sql`, `sql/aggregates/notifications/`
   с макросами, репозиторий.
 - Композит: реакция создаётся при сборке на общем `Hub` до первого `notify`.
 
 ## Критерии приёмки
-- Unit домена: критерии `about_loan`, `of_kind`; реакция на `LoanIssued` сохраняет уведомление
-  (свой `Hub` в тесте, замороженное время).
+- Unit домена: критерии `about_loan`, `of_kind`.
+- Unit app: реакция на `LoanIssued` сохраняет уведомление (свой `Hub` в тесте, замороженное время).
 - БД: репозиторий, макросы, контрактные тесты; обе миграции применяются по порядку.
 - E2E: `POST /library/loans` создаёт уведомление `loan_issued` в той же транзакции; если сохранение
   уведомления падает, выдача откатывается.

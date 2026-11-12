@@ -2,6 +2,9 @@ import logging
 from dataclasses import dataclass
 from datetime import date
 
+from classic.signals import Hub
+
+from library.app.commands.signals import LoanIssued
 from library.app.domain.borrow_copy import BorrowCopy
 from library.app.roles import Account, Permissions
 
@@ -24,8 +27,14 @@ class LoanCreated:
 class IssueLoan:
     """Выдача экземпляра читателю."""
 
-    def __init__(self, borrow_copy: BorrowCopy, logger: logging.Logger) -> None:
+    def __init__(
+        self,
+        borrow_copy: BorrowCopy,
+        hub: Hub,
+        logger: logging.Logger,
+    ) -> None:
         self._borrow_copy = borrow_copy
+        self._hub = hub
         self._logger = logger
 
     def run(self, params: IssueLoanParams, account: Account) -> LoanCreated:
@@ -36,6 +45,7 @@ class IssueLoan:
             on=date.today(),
         )
         assert loan.id is not None
+        self._hub.notify(LoanIssued(loan_id=loan.id, reader_id=loan.reader_id))
         self._logger.info(
             'Выдача оформлена: id=%s, reader_id=%s, copy_id=%s',
             loan.id,

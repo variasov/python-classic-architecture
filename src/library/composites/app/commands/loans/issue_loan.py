@@ -4,11 +4,12 @@ import pydantic
 
 from library.app.commands.loans.issue_loan import IssueLoan
 from library.composites.app.domain.borrow_copy import borrow_copy
+from library.composites.app.hub import hub
 from library.composites.infra.db.engine import engine
 
 logger = logging.getLogger('library')
 
-issue_loan = IssueLoan(borrow_copy=borrow_copy, logger=logger)
+issue_loan = IssueLoan(borrow_copy=borrow_copy, hub=hub, logger=logger)
 
 # fmt: off
 issue_loan.run = (

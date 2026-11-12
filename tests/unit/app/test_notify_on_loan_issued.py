@@ -4,12 +4,12 @@ import pytest
 from classic.criteria import ReturnsTrue
 from classic.signals import Hub
 
-from library.app.domain.events import LoanIssued
+from library.app.commands.loans.notify_on_loan_issued import NotifyOnLoanIssued
+from library.app.commands.signals import LoanIssued
 from library.app.domain.notification import (
     NotificationKind,
     NotificationsRepo,
 )
-from library.app.domain.notify_on_loan_issued import NotifyOnLoanIssued
 
 
 @pytest.fixture
