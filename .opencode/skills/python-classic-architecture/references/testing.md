@@ -18,14 +18,14 @@
         conftest.py                 # репозитории и гейтвеи поверх db_engine, фабрики данных
         test_<repo>.py
         test_<gateway>.py
-      interfaces/api/
+      interfaces/web_api/
         conftest.py                 # create_app с фейковыми usecase
         test_<resource>.py
       integrations/<system>/
         test_client.py
     composites/
       conftest.py                   # тестовое окружение, stub-серверы, импорт композита
-      test_<entry>.py               # test_api.py, test_<name>_scheduler.py
+      test_<entry>.py               # test_web_api.py, test_<name>_scheduler.py
   ```
 - Имя файла теста соответствует тестируемому классу (usecase, репозиторию, ресурсу, точке входа).
 - В `tests/` нет `__init__.py`, pytest запускается с `--import-mode=importlib` (см. `references/tooling.md`).

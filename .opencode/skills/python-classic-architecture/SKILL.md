@@ -20,9 +20,11 @@ compatibility: opencode
 |---|---|---|
 | Приложение | `app/` | `python-classic-app` |
 | Модель домена (часть app, опционально) | `app/commands/domain/` | `python-classic-domain` |
-| Адаптер HTTP API | `interfaces/api/` | `python-classic-adapters-http-api` |
+| Адаптер HTTP API | `interfaces/<name>_api/` | `python-classic-adapters-http-api` |
 | Адаптер SQL DB | `infra/db/` | `python-classic-adapters-sql-db` |
 | Композит | `composites/` | `python-classic-composite` |
+| Аспект валидации | `composites/` | `python-classic-aspects-validation` |
+| Аспект повторов | `composites/` | `python-classic-aspects-retrying` |
 
 Редко нужные подробности вынесены в файлы `references/` в каталоге навыка и читаются по необходимости:
 
@@ -195,7 +197,7 @@ tests/                         # см. references/testing.md
 ## Adapters - interfaces
 - Содержит модули, предоставляющие доступ другим системам к приложению: HTTP API, чат-боты, планировщики, обработчики очередей.
 - Отвечает за перевод из формата общения с другой системой в формат, доступный приложению.
-- Здесь сырые данные разбираются в датаклассы `Params` usecase, ДО вызова usecase. Инструмент разбора описан в навыке конкретного адаптера.
+- Адаптер передаёт сырые данные в usecase, а в датаклассы `Params` их превращает аспект валидации, навешанный на usecase в композите (см. `python-classic-aspects-validation`). Как адаптер извлекает данные и отдаёт результат, описано в навыке конкретного адаптера.
 - Не содержит бизнес-логику и SQL, только обращается к usecase или испускает сигнал.
 - Подписчик на сигнал, которому не нужна инфраструктура и который только вызывает usecase, - это interface: `interfaces/signals/<subscriber>.py`.
 
