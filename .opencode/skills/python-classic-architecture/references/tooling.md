@@ -110,8 +110,6 @@ ignore_imports = [
     "<package>.app.domain.** -> typing",
     "<package>.app.domain.** -> classic.criteria",
     "<package>.app.domain.** -> classic.criteria.**",
-    "<package>.app.domain.** -> classic.signals",
-    "<package>.app.domain.** -> classic.signals.**",
 ]
 
 [[tool.importlinter.contracts]]
@@ -147,7 +145,7 @@ ignore_imports = [
 - Запуск: `lint-imports` (через `uv run lint-imports`). Проверяется установленный пакет, поэтому проект ставится в режиме редактирования (`pip install -e` / `uv sync`).
 - Контракты зеркалят правила слоёв из `python-classic-architecture`, `python-classic-app` и `python-classic-domain`:
   - `layers` с тремя адаптерами через `|` - адаптеры одного уровня, зависят только от app и не знают друг о друге;
-  - домен импортирует только минимум стандартной библиотеки и `classic.criteria`, `classic.signals`, а из проекта - только сам домен;
+  - домен импортирует только минимум стандартной библиотеки и `classic.criteria`, а из проекта - только сам домен;
   - запросы не импортируют ничего из `app/commands` и `app/domain` (CQRS);
   - остальной app импортирует только разрешённые библиотеки.
 - Зависимости задаются белыми списками: контракт `forbidden` с маской `*` в `forbidden_modules` запрещает любые импорты, а `ignore_imports` перечисляет разрешённые - по строке на модуль. Новая библиотека в проекте сразу запрещена и в домене, и в app, без правки конфига, а технологии из стандартной библиотеки (`json`, `sqlite3`, `http`, `os`) тоже не проходят. `unmatched_ignore_imports_alerting = "none"` нужен, чтобы не используемые пока разрешения не считались ошибкой.
@@ -157,7 +155,7 @@ ignore_imports = [
   - белый список app начинается с того же минимума и расширяется по необходимости. В app, кроме домена, размещается логика, которая удовлетворяет требования бизнеса, но носит технический характер, например генерация отчёта Excel. Библиотека для такой логики (`openpyxl`) добавляется в белый список app. Фреймворки, драйверы, клиенты внешних систем и библиотеки парсинга и сериализации входа/выхода в него не добавляются: это технологии адаптеров.
 - Модуль стандартной библиотеки добавляется в белый список домена, только когда он нужен доменной логике и не привязывает её к технологии (например, `decimal`, `uuid`, `itertools`).
 - Если домена нет, контракт домена не добавляется.
-- Внешний пакет (`include_external_packages = true`) import-linter схлопывает в один узел по первому сегменту имени: `classic.criteria` и `classic.db_tools` для него - один и тот же `classic`. Пакет, у которого разрешена только часть подпакетов, объявляется в `root_packages`: тогда import-linter анализирует его код и видит подпакеты. Так `classic` разрешается в app только частично - `classic.criteria` и `classic.signals`, а `classic.db_tools`, `classic.migrations`, `classic.scheduler` запрещены.
+- Внешний пакет (`include_external_packages = true`) import-linter схлопывает в один узел по первому сегменту имени: `classic.criteria` и `classic.db_tools` для него - один и тот же `classic`. Пакет, у которого разрешена только часть подпакетов, объявляется в `root_packages`: тогда import-linter анализирует его код и видит подпакеты. Так `classic` разрешается только частично - в домене `classic.criteria`, в остальном app ещё и `classic.signals`, а `classic.db_tools`, `classic.migrations`, `classic.scheduler` запрещены.
 - Разрешённый подпакет корневого пакета указывается двумя строками - `-> classic.signals` и `-> classic.signals.**`: импорты идут и в сам пакет (`from classic.signals import Hub`), и в его модули (`classic.criteria.criteria`), а маска `**` сам пакет не включает.
 - Имена контрактов пишутся по-английски: вывод `lint-imports` в консоли Windows искажает кириллицу.
 
