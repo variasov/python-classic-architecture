@@ -98,27 +98,27 @@ layers = [
 [[tool.importlinter.contracts]]
 name = "Domain imports only stdlib minimum and allowed classic packages"
 type = "forbidden"
-source_modules = ["<package>.app.commands.domain"]
-forbidden_modules = ["*", "<package>.app.*", "<package>.app.commands.*"]
+source_modules = ["<package>.app.domain"]
+forbidden_modules = ["*", "<package>.app.*"]
 unmatched_ignore_imports_alerting = "none"
 ignore_imports = [
-    "<package>.app.commands.domain.** -> abc",
-    "<package>.app.commands.domain.** -> collections",
-    "<package>.app.commands.domain.** -> dataclasses",
-    "<package>.app.commands.domain.** -> datetime",
-    "<package>.app.commands.domain.** -> enum",
-    "<package>.app.commands.domain.** -> typing",
-    "<package>.app.commands.domain.** -> classic.criteria",
-    "<package>.app.commands.domain.** -> classic.criteria.**",
-    "<package>.app.commands.domain.** -> classic.signals",
-    "<package>.app.commands.domain.** -> classic.signals.**",
+    "<package>.app.domain.** -> abc",
+    "<package>.app.domain.** -> collections",
+    "<package>.app.domain.** -> dataclasses",
+    "<package>.app.domain.** -> datetime",
+    "<package>.app.domain.** -> enum",
+    "<package>.app.domain.** -> typing",
+    "<package>.app.domain.** -> classic.criteria",
+    "<package>.app.domain.** -> classic.criteria.**",
+    "<package>.app.domain.** -> classic.signals",
+    "<package>.app.domain.** -> classic.signals.**",
 ]
 
 [[tool.importlinter.contracts]]
-name = "Queries do not import commands"
+name = "Queries do not import commands and domain"
 type = "forbidden"
 source_modules = ["<package>.app.queries"]
-forbidden_modules = ["<package>.app.commands"]
+forbidden_modules = ["<package>.app.commands", "<package>.app.domain"]
 
 [[tool.importlinter.contracts]]
 name = "App imports only allowed libraries"
@@ -148,10 +148,10 @@ ignore_imports = [
 - Контракты зеркалят правила слоёв из `python-classic-architecture`, `python-classic-app` и `python-classic-domain`:
   - `layers` с тремя адаптерами через `|` - адаптеры одного уровня, зависят только от app и не знают друг о друге;
   - домен импортирует только минимум стандартной библиотеки и `classic.criteria`, `classic.signals`, а из проекта - только сам домен;
-  - запросы не импортируют ничего из `app/commands` (CQRS);
+  - запросы не импортируют ничего из `app/commands` и `app/domain` (CQRS);
   - остальной app импортирует только разрешённые библиотеки.
 - Зависимости задаются белыми списками: контракт `forbidden` с маской `*` в `forbidden_modules` запрещает любые импорты, а `ignore_imports` перечисляет разрешённые - по строке на модуль. Новая библиотека в проекте сразу запрещена и в домене, и в app, без правки конфига, а технологии из стандартной библиотеки (`json`, `sqlite3`, `http`, `os`) тоже не проходят. `unmatched_ignore_imports_alerting = "none"` нужен, чтобы не используемые пока разрешения не считались ошибкой.
-- Маска `*` закрывает только внешние модули: модули проекта, содержащие источник (`<package>`, `<package>.app`), import-linter пропускает. Поэтому в контракте домена к ней добавлены `<package>.app.*` и `<package>.app.commands.*`: они запрещают домену `errors.py`, `roles.py`, `queries`, `use_cases` и любые другие модули app, а сам домен из запрета выпадает, так как содержит источник.
+- Маска `*` закрывает только внешние модули: модули проекта, содержащие источник (`<package>`, `<package>.app`), import-linter пропускает. Поэтому в контракте домена к ней добавлена маска `<package>.app.*`: она запрещает домену `errors.py`, `roles.py`, `commands`, `queries` и любые другие модули app, а сам домен из запрета выпадает, так как содержит источник.
 - Требования к домену и к остальному app различаются:
   - белый список домена фиксирован и минимален: домен - модель предметной области, ему не нужны ни библиотеки, ни логирование;
   - белый список app начинается с того же минимума и расширяется по необходимости. В app, кроме домена, размещается логика, которая удовлетворяет требования бизнеса, но носит технический характер, например генерация отчёта Excel. Библиотека для такой логики (`openpyxl`) добавляется в белый список app. Фреймворки, драйверы, клиенты внешних систем и библиотеки парсинга и сериализации входа/выхода в него не добавляются: это технологии адаптеров.

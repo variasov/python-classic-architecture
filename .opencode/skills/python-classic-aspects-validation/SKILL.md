@@ -34,7 +34,7 @@ compatibility: opencode
   find_books.run = pydantic.validate_call(find_books.run)  # pyright: ignore[reportAttributeAccessIssue]
   ```
   ```python
-  # composites/app/commands/create_book.py
+  # composites/app/commands/books/create_book.py
   create_book = CreateBook(books=books_repo, logger=logger)
   # fmt: off
   create_book.run = (
