@@ -4,15 +4,15 @@ from datetime import date
 import pytest
 from classic.criteria import ReturnsTrue
 
-from library.app.commands.domain.copy import CopiesRepo, Copy, CopyNotTaken
-from library.app.commands.domain.loan import (
+from library.app.domain.copy import CopiesRepo, Copy, CopyNotTaken
+from library.app.domain.loan import (
     Loan,
     LoanAlreadyReturned,
     LoanNotFound,
     LoanPeriod,
     LoansRepo,
 )
-from library.app.commands.domain.return_copy import ReturnCopy
+from library.app.domain.return_copy import ReturnCopy
 
 TODAY = date(2026, 3, 10)
 TOMORROW = date(2026, 3, 11)

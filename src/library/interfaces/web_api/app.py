@@ -4,7 +4,7 @@ import falcon.media
 import orjson
 import pydantic
 
-from library.app.commands.domain.errors import DomainError
+from library.app.domain.errors import DomainError
 from library.app.errors import AppError, AuthError
 from library.interfaces.web_api.errors import (
     serialize_app_error,

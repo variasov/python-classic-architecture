@@ -15,7 +15,7 @@
 ## Сделать
 - Домен: `Loan`, `LoanPeriod`, `Extension`, инварианты, критерии, `LoansRepo`, ошибки;
   `events.py` (`LoanIssued`); доменный usecase `BorrowCopy`.
-- App: `use_cases/loans/issue_loan.py`.
+- App: `commands/loans/issue_loan.py`.
 - БД: таблицы, `sql/aggregates/loans/` с макросами всех критериев `Loan`, репозиторий
   (`extensions` - `Append`, перезапись delete+insert с `position`).
 - HTTP: ресурс `/library/loans` `POST` → 201.

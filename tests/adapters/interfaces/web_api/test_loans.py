@@ -2,11 +2,11 @@ from typing import Any
 
 from falcon import testing
 
-from library.app.commands.domain.borrow_copy import (
+from library.app.domain.borrow_copy import (
     LoanLimitReached,
     ReaderHasOverdueLoans,
 )
-from library.app.commands.domain.copy import CopyNotAvailable
+from library.app.domain.copy import CopyNotAvailable
 from library.app.roles import PermissionDenied
 
 LOAN: dict[str, Any] = {'reader_id': 1, 'copy_id': 2}

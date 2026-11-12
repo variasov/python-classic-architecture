@@ -5,7 +5,7 @@ from classic.criteria import Criteria
 from hypothesis import given
 from hypothesis import strategies as st
 
-from library.app.commands.domain.copy import (
+from library.app.domain.copy import (
     Copy,
     CopyNotAvailable,
     CopyNotFound,

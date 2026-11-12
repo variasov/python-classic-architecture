@@ -14,7 +14,7 @@
 ## Сделать
 - Домен: `Reader`, `Membership` (с `loan_limit`), `Contact`, инварианты, критерии, `ReadersRepo`, ошибки.
   Поведение `extend_membership`/`block`/`unblock` - в задаче 06.
-- App: `use_cases/readers/register_reader.py`.
+- App: `commands/readers/register_reader.py`.
 - БД: таблица, `sql/aggregates/readers/` с макросами всех критериев `Reader`, репозиторий
   (`Membership`, `Contact` - через `Value` + `Assign`).
 - HTTP: ресурс `/library/readers` `POST` → 201.

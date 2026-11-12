@@ -3,7 +3,7 @@ from typing import Any
 from classic.criteria import Criteria
 from classic.db_tools import Append, Assign, Engine, Entity, Value
 
-from library.app.commands.domain.loan import (
+from library.app.domain.loan import (
     Extension,
     Loan,
     LoanNotFound,

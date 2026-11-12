@@ -1,6 +1,6 @@
 from classic.scheduler import Scheduler
 
-from library.composites.app.commands.remind_overdue_loans import (
+from library.composites.app.commands.loans.remind_overdue_loans import (
     remind_overdue_loans,
 )
 

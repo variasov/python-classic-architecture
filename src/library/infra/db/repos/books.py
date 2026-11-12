@@ -3,7 +3,7 @@ from typing import Any
 from classic.criteria import Criteria
 from classic.db_tools import Engine, Entity
 
-from library.app.commands.domain.book import Book, BookNotFound, BooksRepo
+from library.app.domain.book import Book, BookNotFound, BooksRepo
 
 
 class DbBooksRepo(BooksRepo):

@@ -2,11 +2,11 @@ from collections.abc import Callable
 
 import pytest
 
-from library.app.commands.domain.book import Book, BookIsbnInvalid, BooksRepo
-from library.app.commands.use_cases.books.create_book import (
+from library.app.commands.books.create_book import (
     CreateBook,
     CreateBookParams,
 )
+from library.app.domain.book import Book, BookIsbnInvalid, BooksRepo
 from library.app.roles import Account, PermissionDenied
 
 

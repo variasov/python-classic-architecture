@@ -16,7 +16,7 @@ HTTP-приложение с обработкой ошибок, композит
 ## Сделать
 - `pyproject.toml`: зависимости из «Ограничений», которых не хватает (`tenacity`, `freezegun` и т.п.).
 - `app/errors.py` (`AppError`, `AuthError`), `app/roles.py` (`Permissions`, `Account`, `PermissionDenied`).
-- `app/commands/domain/errors.py` (`DomainError`).
+- `app/domain/errors.py` (`DomainError`).
 - `infra/db/`: `settings.py`, `constants.py`, `sql/migrations/0001.init.sql` (пока только схема
   `library`), `sql/schema/DDL.sql`.
 - `interfaces/web_api/`: `create_app` (обработчики ошибок 400/403/422, middleware `X-User` → `Account`),

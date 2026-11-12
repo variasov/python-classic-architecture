@@ -2,7 +2,7 @@ from typing import Any
 
 from falcon import testing
 
-from library.app.commands.domain.reader import (
+from library.app.domain.reader import (
     ReaderAlreadyBlocked,
     ReaderNotBlocked,
     ReaderNotFound,

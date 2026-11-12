@@ -3,7 +3,7 @@ from collections.abc import Callable
 import pytest
 from classic.criteria import Criteria, ReturnsTrue
 
-from library.app.commands.domain.book import Book, BooksRepo
+from library.app.domain.book import Book, BooksRepo
 from library.infra.db.repos.books import DbBooksRepo
 
 

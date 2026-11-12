@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 import pytest
 
-from library.app.commands.domain.book import Book, BookNotFound, BooksRepo
+from library.app.domain.book import Book, BookNotFound, BooksRepo
 
 
 def _load(repo: BooksRepo, book: Book) -> Book:

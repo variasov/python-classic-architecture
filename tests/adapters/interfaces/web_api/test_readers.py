@@ -2,7 +2,7 @@ from typing import Any
 
 from falcon import testing
 
-from library.app.commands.domain.reader import ContactEmailInvalid
+from library.app.domain.reader import ContactEmailInvalid
 from library.app.roles import PermissionDenied
 
 READER: dict[str, Any] = {

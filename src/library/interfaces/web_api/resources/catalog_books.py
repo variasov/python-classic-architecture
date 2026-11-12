@@ -1,6 +1,6 @@
 import falcon
 
-from library.app.commands.use_cases.books.create_book_from_catalog import (
+from library.app.commands.books.create_book_from_catalog import (
     CreateBookFromCatalog,
 )
 

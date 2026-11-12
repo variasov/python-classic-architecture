@@ -14,7 +14,7 @@
 
 ## Сделать
 - Домен: поведение `Reader` и его ошибки.
-- App: `use_cases/readers/extend_membership.py`, `block_reader.py`, `unblock_reader.py`.
+- App: `commands/readers/extend_membership.py`, `block_reader.py`, `unblock_reader.py`.
 - HTTP: `PUT /library/memberships`, `POST /library/reader_blocks`, `DELETE /library/reader_blocks?reader_id=`.
 - Композит: сборка, транзакции, ресурсы.
 

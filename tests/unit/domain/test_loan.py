@@ -6,7 +6,7 @@ from classic.criteria import Criteria
 from hypothesis import given
 from hypothesis import strategies as st
 
-from library.app.commands.domain.loan import (
+from library.app.domain.loan import (
     Extension,
     ExtensionNotForward,
     Loan,

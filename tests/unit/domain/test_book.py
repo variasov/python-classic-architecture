@@ -4,7 +4,7 @@ from datetime import date
 import pytest
 from classic.criteria import Criteria
 
-from library.app.commands.domain.book import (
+from library.app.domain.book import (
     Book,
     BookIsbnInvalid,
     BookNotFound,

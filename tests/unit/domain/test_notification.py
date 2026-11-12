@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from datetime import date
 
-from library.app.commands.domain.notification import (
+from library.app.domain.notification import (
     Notification,
     NotificationKind,
     NotificationNotFound,

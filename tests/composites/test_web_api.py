@@ -5,7 +5,7 @@ import pytest
 from falcon import testing
 from pytest_httpserver import HTTPServer
 
-from library.app.commands.domain.loan import Loan
+from library.app.domain.loan import Loan
 
 BOOK: dict[str, Any] = {
     'isbn': '9785171183660',

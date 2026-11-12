@@ -8,14 +8,14 @@ import pytest
 from falcon import testing
 from pydantic import TypeAdapter
 
-from library.app.commands.domain.errors import DomainError
-from library.app.commands.use_cases.books.add_copy import CopyCreated
-from library.app.commands.use_cases.books.create_book import BookCreated
-from library.app.commands.use_cases.books.create_book_from_catalog import (
+from library.app.commands.books.add_copy import CopyCreated
+from library.app.commands.books.create_book import BookCreated
+from library.app.commands.books.create_book_from_catalog import (
     CatalogBookCreated,
 )
-from library.app.commands.use_cases.loans.issue_loan import LoanCreated
-from library.app.commands.use_cases.readers.register_reader import ReaderCreated
+from library.app.commands.loans.issue_loan import LoanCreated
+from library.app.commands.readers.register_reader import ReaderCreated
+from library.app.domain.errors import DomainError
 from library.app.errors import AppError
 from library.app.queries.books.find_books import BookListItemDTO
 from library.app.queries.books.get_book import BookCardDTO, BookCopyDTO

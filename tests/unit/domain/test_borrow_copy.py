@@ -5,20 +5,20 @@ import pytest
 from classic.criteria import ReturnsTrue
 from classic.signals import Hub
 
-from library.app.commands.domain.borrow_copy import (
+from library.app.domain.borrow_copy import (
     BorrowCopy,
     LoanLimitReached,
     ReaderCannotBorrow,
     ReaderHasOverdueLoans,
 )
-from library.app.commands.domain.copy import CopiesRepo, Copy, CopyNotAvailable
-from library.app.commands.domain.events import LoanIssued
-from library.app.commands.domain.loan import (
+from library.app.domain.copy import CopiesRepo, Copy, CopyNotAvailable
+from library.app.domain.events import LoanIssued
+from library.app.domain.loan import (
     Loan,
     LoanPeriod,
     LoansRepo,
 )
-from library.app.commands.domain.reader import (
+from library.app.domain.reader import (
     Membership,
     Reader,
     ReadersRepo,

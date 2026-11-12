@@ -153,7 +153,7 @@ Usecase получает дату один раз и передаёт её во 
 
 ### Доменные события
 
-Контракты событий - в `app/commands/domain/events.py`:
+Контракты событий - в `app/domain/events.py`:
 - `LoanIssued(loan_id: int, reader_id: int)` - выдача оформлена. Это понятие предметной
   области, поэтому событие испускает сам домен (доменный usecase `BorrowCopy`).
 
@@ -193,7 +193,7 @@ Usecase получает дату один раз и передаёт её во 
   - 200 → `{"isbn": str, "title": str, "authors": [str], "year": int}`;
   - 404 → книги в каталоге нет.
 - ABC `IsbnCatalog` с методом `find(isbn) -> CatalogBook | None` нужен одной команде,
-  поэтому объявляется в её файле (`use_cases/books/create_book_from_catalog.py`) вместе
+  поэтому объявляется в её файле (`commands/books/create_book_from_catalog.py`) вместе
   с датаклассом `CatalogBook(isbn, title, authors, year)`.
 - `integrations/isbn_catalog/`:
   - `client.py` - датакласс контракта ответа `CatalogBookPayload` и клиент `IsbnCatalogClient(IsbnCatalog)`
@@ -226,7 +226,7 @@ Usecase получает дату один раз и передаёт её во 
 - HTTP: middleware в `interfaces/web_api` строит `Account` из заголовка `X-User` по статической таблице
   пользователей из настроек (демо-аутентификация). Результат кладётся в `req.context.account`.
 
-### Команды (`app/commands/use_cases/`)
+### Команды (`app/commands/`)
 
 Ошибки, объявленные в домене, - `DomainError`; ошибки, объявленные в файле команды, - `AppError`.
 Все команды проверяют право в начале `run` (`PermissionDenied`).

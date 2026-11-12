@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from classic.criteria import Criteria, ReturnsTrue
 
-from library.app.commands.domain.reader import (
+from library.app.domain.reader import (
     Contact,
     ContactEmailInvalid,
     Membership,

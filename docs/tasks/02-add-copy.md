@@ -13,7 +13,7 @@
 
 ## Сделать
 - Домен: `Copy`, `ShelfLocation`, поведение `take()`/`give_back()`, критерии, `CopiesRepo`, ошибки.
-- App: `use_cases/books/add_copy.py` - `AddCopy`, `AddCopyParams`, `InventoryNumberTaken`.
+- App: `commands/books/add_copy.py` - `AddCopy`, `AddCopyParams`, `InventoryNumberTaken`.
 - БД: таблица, `sql/aggregates/copies/` с макросами всех критериев `Copy`, репозиторий
   (`ShelfLocation` маппится через `Value` + `Assign`).
 - HTTP: ресурс `/library/copies` `POST` → 201.

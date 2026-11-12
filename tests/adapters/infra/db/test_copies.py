@@ -4,8 +4,8 @@ from typing import Any
 import pytest
 from classic.criteria import Criteria, ReturnsTrue
 
-from library.app.commands.domain.book import Book
-from library.app.commands.domain.copy import (
+from library.app.domain.book import Book
+from library.app.domain.copy import (
     CopiesRepo,
     Copy,
     CopyNotFound,

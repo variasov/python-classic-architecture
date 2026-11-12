@@ -1,7 +1,7 @@
 from typing import Any
 
-from library.app.commands.domain.events import LoanIssued
-from library.app.commands.domain.notify_on_loan_issued import NotifyOnLoanIssued
+from library.app.domain.events import LoanIssued
+from library.app.domain.notify_on_loan_issued import NotifyOnLoanIssued
 
 
 def test_notify_on_loan_issued_is_registered(api_app: Any) -> None:

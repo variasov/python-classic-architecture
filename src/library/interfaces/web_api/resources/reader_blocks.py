@@ -1,7 +1,7 @@
 import falcon
 
-from library.app.commands.use_cases.readers.block_reader import BlockReader
-from library.app.commands.use_cases.readers.unblock_reader import (
+from library.app.commands.readers.block_reader import BlockReader
+from library.app.commands.readers.unblock_reader import (
     UnblockReader,
 )
 

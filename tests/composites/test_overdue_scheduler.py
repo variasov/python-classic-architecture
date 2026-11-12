@@ -28,7 +28,7 @@ READER: dict[str, Any] = {
 
 
 def test_scheduler_registers_daily_overdue_reminder(test_env: None) -> None:
-    from library.composites.app.commands.remind_overdue_loans import (
+    from library.composites.app.commands.loans.remind_overdue_loans import (
         remind_overdue_loans,
     )
     from library.composites.interfaces.overdue_scheduler.scheduler import (
@@ -49,7 +49,7 @@ def test_scheduler_creates_overdue_notification_once(
     raw_db: Any,
     test_env: None,
 ) -> None:
-    from library.composites.app.commands.remind_overdue_loans import (
+    from library.composites.app.commands.loans.remind_overdue_loans import (
         remind_overdue_loans,
     )
 

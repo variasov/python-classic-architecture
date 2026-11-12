@@ -4,19 +4,19 @@ from datetime import date, timedelta
 
 import pytest
 
-from library.app.commands.domain.copy import CopiesRepo, Copy
-from library.app.commands.domain.loan import (
+from library.app.commands.loans.return_loan import (
+    ReturnLoan,
+    ReturnLoanParams,
+)
+from library.app.domain.copy import CopiesRepo, Copy
+from library.app.domain.loan import (
     Loan,
     LoanAlreadyReturned,
     LoanNotFound,
     LoanPeriod,
     LoansRepo,
 )
-from library.app.commands.domain.return_copy import ReturnCopy
-from library.app.commands.use_cases.loans.return_loan import (
-    ReturnLoan,
-    ReturnLoanParams,
-)
+from library.app.domain.return_copy import ReturnCopy
 from library.app.roles import Account, PermissionDenied, Permissions
 
 TODAY = date.today()

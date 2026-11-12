@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 from classic.db_tools import Engine
 
-from library.app.commands.domain.book import Book, BooksRepo
+from library.app.domain.book import Book, BooksRepo
 from library.app.queries.books.find_books import FindBooksGateway
 from library.app.queries.books.get_book import GetBookGateway
 from library.app.queries.loans.find_loans import FindLoansGateway

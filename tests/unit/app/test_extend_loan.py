@@ -4,7 +4,11 @@ from datetime import date, timedelta
 
 import pytest
 
-from library.app.commands.domain.loan import (
+from library.app.commands.loans.extend_loan import (
+    ExtendLoan,
+    ExtendLoanParams,
+)
+from library.app.domain.loan import (
     Extension,
     Loan,
     LoanAlreadyReturned,
@@ -13,10 +17,6 @@ from library.app.commands.domain.loan import (
     LoanPeriod,
     LoansRepo,
     TooManyExtensions,
-)
-from library.app.commands.use_cases.loans.extend_loan import (
-    ExtendLoan,
-    ExtendLoanParams,
 )
 from library.app.roles import Account, PermissionDenied, Permissions
 

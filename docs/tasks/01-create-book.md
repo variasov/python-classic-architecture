@@ -13,7 +13,7 @@
 
 ## Сделать
 - Домен: `Book` с инвариантами и критериями, `BooksRepo` (ABC), `BookNotFound` и ошибки инвариантов.
-- App: `use_cases/books/create_book.py` - `CreateBook`, `CreateBookParams`.
+- App: `commands/books/create_book.py` - `CreateBook`, `CreateBookParams`.
 - БД: таблицы в `0001.init.sql` и `DDL.sql`; `sql/aggregates/books/` (запросы и `criteria.sql.tmpl`
   с макросами всех критериев `Book`); репозиторий `BooksRepo` (`get_by_id`, `save`, `find`).
 - HTTP: ресурс `/library/books` `POST` → 201 `{"id": int}`.

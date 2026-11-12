@@ -2,8 +2,8 @@ from collections.abc import Callable
 
 import pytest
 
-from library.app.commands.domain.book import Book, BooksRepo
-from library.app.commands.domain.copy import CopiesRepo, Copy
+from library.app.domain.book import Book, BooksRepo
+from library.app.domain.copy import CopiesRepo, Copy
 from library.app.queries.books.find_books import (
     BookListItemDTO,
     FindBooksGateway,

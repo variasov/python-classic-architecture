@@ -1,7 +1,7 @@
 from collections.abc import Callable
 
-from library.app.commands.domain.book import Book, BooksRepo
-from library.app.commands.domain.copy import CopiesRepo, Copy, ShelfLocation
+from library.app.domain.book import Book, BooksRepo
+from library.app.domain.copy import CopiesRepo, Copy, ShelfLocation
 from library.app.queries.books.get_book import GetBookGateway, GetBookParams
 
 

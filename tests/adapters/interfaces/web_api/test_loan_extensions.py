@@ -2,7 +2,7 @@ from typing import Any
 
 from falcon import testing
 
-from library.app.commands.domain.loan import (
+from library.app.domain.loan import (
     LoanAlreadyReturned,
     LoanNotFound,
     LoanOverdue,

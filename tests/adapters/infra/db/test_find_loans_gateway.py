@@ -4,15 +4,15 @@ from uuid import uuid4
 
 import pytest
 
-from library.app.commands.domain.book import Book, BooksRepo
-from library.app.commands.domain.copy import CopiesRepo, Copy
-from library.app.commands.domain.loan import (
+from library.app.domain.book import Book, BooksRepo
+from library.app.domain.copy import CopiesRepo, Copy
+from library.app.domain.loan import (
     Extension,
     Loan,
     LoanPeriod,
     LoansRepo,
 )
-from library.app.commands.domain.reader import Reader, ReadersRepo
+from library.app.domain.reader import Reader, ReadersRepo
 from library.app.queries.loans.find_loans import (
     FindLoansGateway,
     FindLoansParams,

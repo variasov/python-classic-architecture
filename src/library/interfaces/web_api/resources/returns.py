@@ -1,6 +1,6 @@
 import falcon
 
-from library.app.commands.use_cases.loans.return_loan import ReturnLoan
+from library.app.commands.loans.return_loan import ReturnLoan
 
 
 class ReturnsResource:

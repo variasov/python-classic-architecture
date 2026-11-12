@@ -1,4 +1,4 @@
-from library.composites.app.commands.create_book_from_catalog import (
+from library.composites.app.commands.books.create_book_from_catalog import (
     create_book_from_catalog,
 )
 from library.interfaces.web_api.resources.catalog_books import CatalogBooksResource

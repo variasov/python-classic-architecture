@@ -11,7 +11,7 @@
 `python-classic-adapters-http-api`, `python-classic-composite` (аспекты).
 
 ## Сделать
-- App: `use_cases/books/create_book_from_catalog.py` - `CreateBookFromCatalog`, Params,
+- App: `commands/books/create_book_from_catalog.py` - `CreateBookFromCatalog`, Params,
   `IsbnCatalog` (ABC), `CatalogBook`, `BookNotInCatalog`.
 - Интеграция: `integrations/isbn_catalog/client.py` (`CatalogBookPayload`, `IsbnCatalogClient`,
   `IsbnCatalogUnavailable`), `settings.py` (`IsbnCatalogSettings`).

@@ -6,16 +6,16 @@ from uuid import uuid4
 import pytest
 from classic.criteria import Criteria, ReturnsTrue
 
-from library.app.commands.domain.book import Book
-from library.app.commands.domain.copy import Copy
-from library.app.commands.domain.loan import Loan, LoanPeriod
-from library.app.commands.domain.notification import (
+from library.app.domain.book import Book
+from library.app.domain.copy import Copy
+from library.app.domain.loan import Loan, LoanPeriod
+from library.app.domain.notification import (
     Notification,
     NotificationKind,
     NotificationNotFound,
     NotificationsRepo,
 )
-from library.app.commands.domain.reader import Reader
+from library.app.domain.reader import Reader
 from library.infra.db.repos.books import DbBooksRepo
 from library.infra.db.repos.copies import DbCopiesRepo
 from library.infra.db.repos.loans import DbLoansRepo

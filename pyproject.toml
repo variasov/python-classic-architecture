@@ -145,27 +145,27 @@ layers = [
 [[tool.importlinter.contracts]]
 name = "Domain imports only stdlib minimum and allowed classic packages"
 type = "forbidden"
-source_modules = ["library.app.commands.domain"]
-forbidden_modules = ["*", "library.app.*", "library.app.commands.*"]
+source_modules = ["library.app.domain"]
+forbidden_modules = ["*", "library.app.*"]
 unmatched_ignore_imports_alerting = "none"
 ignore_imports = [
-    "library.app.commands.domain.** -> abc",
-    "library.app.commands.domain.** -> collections",
-    "library.app.commands.domain.** -> dataclasses",
-    "library.app.commands.domain.** -> datetime",
-    "library.app.commands.domain.** -> enum",
-    "library.app.commands.domain.** -> typing",
-    "library.app.commands.domain.** -> classic.criteria",
-    "library.app.commands.domain.** -> classic.criteria.**",
-    "library.app.commands.domain.** -> classic.signals",
-    "library.app.commands.domain.** -> classic.signals.**",
+    "library.app.domain.** -> abc",
+    "library.app.domain.** -> collections",
+    "library.app.domain.** -> dataclasses",
+    "library.app.domain.** -> datetime",
+    "library.app.domain.** -> enum",
+    "library.app.domain.** -> typing",
+    "library.app.domain.** -> classic.criteria",
+    "library.app.domain.** -> classic.criteria.**",
+    "library.app.domain.** -> classic.signals",
+    "library.app.domain.** -> classic.signals.**",
 ]
 
 [[tool.importlinter.contracts]]
-name = "Queries do not import commands"
+name = "Queries do not import commands and domain"
 type = "forbidden"
 source_modules = ["library.app.queries"]
-forbidden_modules = ["library.app.commands"]
+forbidden_modules = ["library.app.commands", "library.app.domain"]
 
 [[tool.importlinter.contracts]]
 name = "App imports only allowed libraries"

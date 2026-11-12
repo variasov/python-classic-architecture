@@ -3,7 +3,7 @@ from typing import Any
 
 from falcon import testing
 
-from library.app.commands.domain.reader import MembershipNotExtended, ReaderNotFound
+from library.app.domain.reader import MembershipNotExtended, ReaderNotFound
 from library.app.roles import PermissionDenied
 
 BODY: dict[str, Any] = {'reader_id': 5, 'valid_until': '2027-01-31'}

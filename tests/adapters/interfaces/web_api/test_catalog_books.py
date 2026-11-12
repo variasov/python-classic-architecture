@@ -2,7 +2,7 @@ from typing import Any
 
 from falcon import testing
 
-from library.app.commands.use_cases.books.create_book_from_catalog import (
+from library.app.commands.books.create_book_from_catalog import (
     BookNotInCatalog,
 )
 from library.app.roles import PermissionDenied

@@ -5,14 +5,14 @@ from datetime import date, timedelta
 import pytest
 from classic.criteria import ReturnsTrue
 
-from library.app.commands.domain.loan import Loan, LoanPeriod, LoansRepo
-from library.app.commands.domain.notification import (
+from library.app.commands.loans.remind_overdue_loans import (
+    RemindOverdueLoans,
+)
+from library.app.domain.loan import Loan, LoanPeriod, LoansRepo
+from library.app.domain.notification import (
     Notification,
     NotificationKind,
     NotificationsRepo,
-)
-from library.app.commands.use_cases.loans.remind_overdue_loans import (
-    RemindOverdueLoans,
 )
 
 TODAY = date.today()

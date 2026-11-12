@@ -15,8 +15,8 @@
 
 ### 00. Каркас (выполнено)
 - Создан `pyproject.toml` (setuptools, `src` + namespace-пакеты, конфиги pyright strict / ruff / vulture / pytest с `--import-mode=importlib`).
-- Пакет `library` в `src/library/` без единого `__init__.py`; слои: `app`, `app/commands/domain`, `infra/db`, `interfaces/web_api`, `composites`.
-- `app/errors.py` (`AppError`, независимый `AuthError`), `app/roles.py` (`Permissions`, `Account.require`, `PermissionDenied`), `app/commands/domain/errors.py`.
+- Пакет `library` в `src/library/` без единого `__init__.py`; слои: `app`, `app/domain`, `infra/db`, `interfaces/web_api`, `composites`.
+- `app/errors.py` (`AppError`, независимый `AuthError`), `app/roles.py` (`Permissions`, `Account.require`, `PermissionDenied`), `app/domain/errors.py`.
 - `infra/db`: `settings.py` (чувствительные DB_* без дефолтов, `MIGRATIONS_SCHEMA=library_migrations`), `constants.py`, `sql/migrations/0001.init.sql`, `sql/schema/DDL.sql`.
 - `interfaces/web_api`: `UserMiddleware` (X-User → Account в `req.context.account`), `errors.py` (400/403/422, тело `[{"type","msg","ctx"}]`), `settings.py` (`API_HOST`, `API_PORT`, таблица `USERS`).
 - Композит: `composites/app/hub.py`, `composites/infra/db/{settings,engine}.py`, `composites/interfaces/web_api/{settings,wsgi,__main__}.py`. `create_app` живёт в `wsgi.py` (по скиллу HTTP), ресурсы передаются аргументами.
@@ -26,7 +26,7 @@
 
 ### 01. Создание книги (выполнено)
 - Домен `domain/book.py`: `Book` (isbn 13 цифр, непустое имя, год не в будущем), критерии `published_after`/`written_by`, `BooksRepo` (`get_by_id`/`save`/`find`), ошибки `BookNotFound`, `BookIsbnInvalid`, `BookTitleEmpty`, `BookPublishedInFuture`.
-- Команда `CreateBook` (`use_cases/books/create_book.py`): права `books.edit` первой строкой, `CreateBookParams` (`authors` не пуст, `isbn` 13 символов).
+- Команда `CreateBook` (`commands/books/create_book.py`): права `books.edit` первой строкой, `CreateBookParams` (`authors` не пуст, `isbn` 13 символов).
 - БД: таблицы `books`, `book_authors` (`position` 0-based, PK `(book_id, position)`), каскад; `aggregates/books/{get_by_id,insert,update,delete_authors,insert_authors}.sql`, `find.sql.tmpl`, `criteria.sql.tmpl`. Авторы читаются одним `array_agg(... ORDER BY position)` в поле `Book__authors`, при сохранении перезаписываются delete+insert.
 - HTTP: `POST /library/books` → 201 `{"id"}`; ресурс `interfaces/web_api/resources/books.py`, инстанс в композите, маршрут в `create_app`.
 - `create_app(settings, books=...)` теперь требует ресурсы явно; тесты API собирают приложение через него (probe-ресурс добавляется тестом).
@@ -38,7 +38,7 @@
   `InventoryNumberEmpty` / `ShelfLocationInvalid`, поведение `take`/`give_back` и ошибки
   `CopyNotAvailable` / `CopyNotTaken`, критерии `available`/`of_book`/`with_inventory_number`,
   `CopiesRepo` (`get_by_id`/`save`/`find`), `CopyNotFound`.
-- Команда `AddCopy` (`use_cases/books/add_copy.py`): право `books.edit` первой строкой, `BookNotFound`,
+- Команда `AddCopy` (`commands/books/add_copy.py`): право `books.edit` первой строкой, `BookNotFound`,
   проверка уникальности через `CopiesRepo.find(Copy.with_inventory_number(...))`, `InventoryNumberTaken`.
   `AddCopyParams.MIN_POSITION` - ClassVar, `rack`/`shelf` >= 1 в `__post_init__`.
 - БД: таблица `library.copies` в `0001.init.sql` и `DDL.sql` (`book_id` с `ON DELETE CASCADE`,
@@ -79,7 +79,7 @@
   «класс=файл»; `BookListItemDTO` содержит `available_copies`.
 
 ### 04. Книга из каталога ISBN (выполнено)
-- App: `use_cases/books/create_book_from_catalog.py` - `CatalogBook`, ABC `IsbnCatalog.find`,
+- App: `commands/books/create_book_from_catalog.py` - `CatalogBook`, ABC `IsbnCatalog.find`,
   `CreateBookFromCatalogParams` (13 символов), `BookNotInCatalog` (`AppError`, в файле команды), право `books.edit`.
 - Интеграция: `integrations/isbn_catalog/{client,settings}.py` - `CatalogBookPayload`, `IsbnCatalogClient`
   на `urllib3.PoolManager`, `GET {URL}/books?isbn=...` (`urlencode`), `TypeAdapter(...).validate_json`;
@@ -104,7 +104,7 @@
   `ClassVar`-таблицей лимитов (basic 3, premium 10) и `loan_limit`; `Reader` (`id` последним),
   рекурсивный `check()`, критерии `membership_active`/`has_tier`/`not_blocked`, `ReadersRepo`,
   `ReaderNotFound`. Поведение `extend_membership`/`block`/`unblock` не добавлялось - задача 06.
-- App: `use_cases/readers/register_reader.py` - `RegisterReaderParams` без дополнительных проверок,
+- App: `commands/readers/register_reader.py` - `RegisterReaderParams` без дополнительных проверок,
   право `readers.edit` первой строкой, сборка агрегата и `save`.
 - БД: `library.readers` в `0001.init.sql` и `DDL.sql`; `aggregates/readers/{get_by_id,insert,update}.sql`,
   `find.sql.tmpl`, `criteria.sql.tmpl` на каждый макрос. `Contact`/`Membership` - `Value` +
@@ -130,7 +130,7 @@
   датаклассы `DomainError` с `__str__`.
 - `reader_id` в новых ошибках - `int | None`, как `copy_id` в `CopyNotAvailable`: агрегат может быть ещё
   не сохранён, когда поведение бросает ошибку.
-- App: `use_cases/readers/{extend_membership,block_reader,unblock_reader}.py` - `Params`, право
+- App: `commands/readers/{extend_membership,block_reader,unblock_reader}.py` - `Params`, право
   `readers.edit` первой строкой `run`, `get_by_id`, поведение, `save`, логгер в конструкторе.
 - HTTP: `MembershipsResource.on_put` (`PUT /library/memberships`, тело `ExtendMembershipParams`);
   `ReaderBlocksResource.on_post` (`POST /library/reader_blocks`, тело `BlockReaderParams`) и `on_delete`
@@ -154,7 +154,7 @@
 - `domain/events.py` - `LoanIssued(loan_id, reader_id)`; `domain/borrow_copy.py` - `BorrowCopy`
   с проверками `ReaderCannotBorrow`/`LoanLimitReached`/`ReaderHasOverdueLoans`/`CopyNotAvailable`,
   сроком `on + 14 дней`, событием через `Hub`.
-- App: `use_cases/loans/issue_loan.py` (`IssueLoanParams`, право `loans.edit` первой строкой,
+- App: `commands/loans/issue_loan.py` (`IssueLoanParams`, право `loans.edit` первой строкой,
   `date.today()`, возврат id).
 - БД: `library.loans` и `library.loan_extensions` в `0001.init.sql` и `DDL.sql`;
   `aggregates/loans/{get_by_id,insert,update,delete_extensions,insert_extensions}.sql`,
@@ -179,7 +179,7 @@
   `Loan.close(on)` (повторный возврат -> `LoanAlreadyReturned`). Новые ошибки - датаклассы `DomainError`.
 - `domain/return_copy.py`: `ReturnCopy(loans, copies).run(loan_id, on)` - `loan.close`, `copy.give_back`,
   сохранение обоих агрегатов; без транзакции, вызывается командой.
-- App: `use_cases/loans/extend_loan.py` (`ExtendLoanParams` с `MAX_DAYS=30` и `0 < days <= 30`,
+- App: `commands/loans/extend_loan.py` (`ExtendLoanParams` с `MAX_DAYS=30` и `0 < days <= 30`,
   право `loans.edit`, `date.today()`) и `return_loan.py` (`ReturnLoanParams`, вызывает `ReturnCopy`).
 - HTTP: `interfaces/web_api/resources/loan_extensions.py` (`POST /library/loan_extensions`, 200) и
   `returns.py` (`POST /library/returns`, 200); маршруты добавлены в `create_app`, ресурсы - в `wsgi.py`
@@ -207,7 +207,7 @@
   `aggregates/notifications/{get_by_id,insert,update,find,criteria}`; `DbNotificationsRepo`.
   `kind` в БД - text: `NotificationKind.value` при записи, обратное преобразование - фабрика `_notification`
   в `Entity(_notification, 'id')` (стандартный маппинг не умеет Enum).
-- Композит: `composites/infra/db/repos/notifications.py`, `composites/app/notify_on_loan_issued.py`
+- Композит: `composites/infra/db/repos/notifications.py`, `composites/app/domain/notify_on_loan_issued.py`
   (инстанс на общем `hub`), `wsgi.py` импортирует реакцию явным re-export до сборки `app`.
 - Тесты: критерии домена в обеих формах и комбинациях; реакция со своим `Hub` и in-memory репозиторием
   (подписка в конструкторе, поля и `created_at=date.today()`); контракт DB+in-memory, roundtrip Enum,
@@ -242,11 +242,11 @@
 - Состояние: `pytest 494 passed`, `pyright 0 errors`. ruff/vulture не запускались (их нет в `.venv-wsl`).
 
 ### 10. Напоминания о просрочке (выполнено)
-- App: `commands/use_cases/loans/remind_overdue_loans.py` - `RemindOverdueLoans(loans, notifications, logger)`,
+- App: `commands/loans/remind_overdue_loans.py` - `RemindOverdueLoans(loans, notifications, logger)`,
   `run()` без `account`. `on = date.today()`, `loans.find(Loan.overdue(on=on))`; если у выдачи нет уведомления
   `about_loan & of_kind(loan_overdue)`, сохраняет `Notification(..., kind=loan_overdue, created_at=on)`.
   Возвращает число новых; повторный запуск - 0. Своих ошибок команда не объявляет.
-- Композит: `composites/app/commands/remind_overdue_loans.py` - инстанс с `engine.transaction` на `run`
+- Композит: `composites/app/commands/loans/remind_overdue_loans.py` - инстанс с `engine.transaction` на `run`
   (задача планировщика - самостоятельный вход в БД; прав у фоновой команды нет).
 - Точка входа `composites/interfaces/overdue_scheduler/`: `scheduler.py` создаёт инстанс `Scheduler`
   и регистрирует `remind_overdue_loans.run` по cron `'0 9 * * *'`; `__main__.py` только вызывает

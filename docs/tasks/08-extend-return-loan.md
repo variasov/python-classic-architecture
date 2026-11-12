@@ -12,7 +12,7 @@
 
 ## Сделать
 - Домен: `Loan.extend`, `Loan.close` и их ошибки; доменный usecase `ReturnCopy`.
-- App: `use_cases/loans/extend_loan.py`, `return_loan.py`.
+- App: `commands/loans/extend_loan.py`, `return_loan.py`.
 - HTTP: ресурсы `/library/loan_extensions`, `/library/returns`.
 - Композит: сборка, транзакции на `run` команд.
 

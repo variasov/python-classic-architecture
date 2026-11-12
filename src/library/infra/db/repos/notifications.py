@@ -4,7 +4,7 @@ from typing import Any
 from classic.criteria import Criteria
 from classic.db_tools import Engine, Entity
 
-from library.app.commands.domain.notification import (
+from library.app.domain.notification import (
     Notification,
     NotificationKind,
     NotificationNotFound,

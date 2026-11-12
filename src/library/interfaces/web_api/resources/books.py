@@ -1,6 +1,6 @@
 import falcon
 
-from library.app.commands.use_cases.books.create_book import CreateBook
+from library.app.commands.books.create_book import CreateBook
 from library.app.queries.books.find_books import FindBooks
 
 

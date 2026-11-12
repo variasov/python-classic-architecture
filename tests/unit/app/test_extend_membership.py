@@ -5,16 +5,16 @@ from datetime import date
 import pytest
 from classic.criteria import ReturnsTrue
 
-from library.app.commands.domain.reader import (
+from library.app.commands.readers.extend_membership import (
+    ExtendMembership,
+    ExtendMembershipParams,
+)
+from library.app.domain.reader import (
     Membership,
     MembershipNotExtended,
     Reader,
     ReaderNotFound,
     ReadersRepo,
-)
-from library.app.commands.use_cases.readers.extend_membership import (
-    ExtendMembership,
-    ExtendMembershipParams,
 )
 from library.app.roles import Account, PermissionDenied, Permissions
 

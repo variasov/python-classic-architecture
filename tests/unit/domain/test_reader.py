@@ -6,7 +6,7 @@ from classic.criteria import Criteria
 from hypothesis import given
 from hypothesis import strategies as st
 
-from library.app.commands.domain.reader import (
+from library.app.domain.reader import (
     Contact,
     ContactEmailInvalid,
     Membership,

@@ -6,22 +6,22 @@ import pytest
 from classic.criteria import ReturnsTrue
 from classic.signals import Hub
 
-from library.app.commands.domain.borrow_copy import (
+from library.app.commands.loans.issue_loan import (
+    IssueLoan,
+    IssueLoanParams,
+)
+from library.app.domain.borrow_copy import (
     BorrowCopy,
     LoanLimitReached,
     ReaderCannotBorrow,
 )
-from library.app.commands.domain.copy import CopiesRepo, Copy
-from library.app.commands.domain.events import LoanIssued
-from library.app.commands.domain.loan import Loan, LoanPeriod, LoansRepo
-from library.app.commands.domain.reader import (
+from library.app.domain.copy import CopiesRepo, Copy
+from library.app.domain.events import LoanIssued
+from library.app.domain.loan import Loan, LoanPeriod, LoansRepo
+from library.app.domain.reader import (
     Membership,
     Reader,
     ReadersRepo,
-)
-from library.app.commands.use_cases.loans.issue_loan import (
-    IssueLoan,
-    IssueLoanParams,
 )
 from library.app.roles import Account, PermissionDenied, Permissions
 

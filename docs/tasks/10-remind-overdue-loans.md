@@ -9,7 +9,7 @@
 `python-classic-app`, `python-classic-composite` + `classic-scheduler`.
 
 ## Сделать
-- App: `use_cases/loans/remind_overdue_loans.py` (без прав, фоновый).
+- App: `commands/loans/remind_overdue_loans.py` (без прав, фоновый).
 - Композит: инстанс команды с транзакцией на `run`; точка входа `interfaces/overdue_scheduler`
   (`__main__.py`, cron `0 9 * * *`); регистрация задачи вынесена в функцию сборки, чтобы её можно было
   проверить без запуска планировщика.

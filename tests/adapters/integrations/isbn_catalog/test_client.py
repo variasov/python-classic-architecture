@@ -1,7 +1,7 @@
 import pytest
 from pytest_httpserver import HTTPServer
 
-from library.app.commands.use_cases.books.create_book_from_catalog import (
+from library.app.commands.books.create_book_from_catalog import (
     CatalogBook,
 )
 from library.integrations.isbn_catalog.client import (

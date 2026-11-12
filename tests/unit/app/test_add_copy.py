@@ -3,13 +3,13 @@ from collections.abc import Callable
 
 import pytest
 
-from library.app.commands.domain.book import Book, BookNotFound, BooksRepo
-from library.app.commands.domain.copy import CopiesRepo, Copy
-from library.app.commands.use_cases.books.add_copy import (
+from library.app.commands.books.add_copy import (
     AddCopy,
     AddCopyParams,
     InventoryNumberTaken,
 )
+from library.app.domain.book import Book, BookNotFound, BooksRepo
+from library.app.domain.copy import CopiesRepo, Copy
 from library.app.roles import Account, PermissionDenied
 
 

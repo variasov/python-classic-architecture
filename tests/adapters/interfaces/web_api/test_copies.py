@@ -2,7 +2,7 @@ from typing import Any
 
 from falcon import testing
 
-from library.app.commands.use_cases.books.add_copy import (
+from library.app.commands.books.add_copy import (
     InventoryNumberTaken,
 )
 from library.app.roles import PermissionDenied

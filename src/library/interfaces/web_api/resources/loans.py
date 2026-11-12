@@ -1,6 +1,6 @@
 import falcon
 
-from library.app.commands.use_cases.loans.issue_loan import IssueLoan
+from library.app.commands.loans.issue_loan import IssueLoan
 from library.app.queries.loans.find_loans import FindLoans
 
 

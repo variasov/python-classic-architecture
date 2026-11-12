@@ -3,7 +3,7 @@ from typing import Any
 from classic.criteria import Criteria
 from classic.db_tools import Assign, Engine, Entity, Value
 
-from library.app.commands.domain.reader import (
+from library.app.domain.reader import (
     Contact,
     Membership,
     Reader,

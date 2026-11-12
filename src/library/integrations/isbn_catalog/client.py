@@ -6,7 +6,7 @@ import pydantic
 import urllib3
 from pydantic import TypeAdapter
 
-from library.app.commands.use_cases.books.create_book_from_catalog import (
+from library.app.commands.books.create_book_from_catalog import (
     CatalogBook,
     IsbnCatalog,
 )

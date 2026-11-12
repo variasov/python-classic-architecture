@@ -1,6 +1,6 @@
 import falcon
 
-from library.app.commands.use_cases.readers.register_reader import (
+from library.app.commands.readers.register_reader import (
     RegisterReader,
 )
 from library.app.queries.readers.find_readers import FindReaders

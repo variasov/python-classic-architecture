@@ -1,6 +1,6 @@
 import falcon
 
-from library.app.commands.use_cases.books.add_copy import AddCopy
+from library.app.commands.books.add_copy import AddCopy
 
 
 class CopiesResource:

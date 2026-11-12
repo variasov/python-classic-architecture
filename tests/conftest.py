@@ -14,26 +14,26 @@ from classic.migrations import MigrationsCollection, Migrator
 from dotenv import dotenv_values
 from psycopg import sql
 
-from library.app.commands.domain.book import Book, BookNotFound, BooksRepo
-from library.app.commands.domain.copy import (
+from library.app.domain.book import Book, BookNotFound, BooksRepo
+from library.app.domain.copy import (
     CopiesRepo,
     Copy,
     CopyNotFound,
     ShelfLocation,
 )
-from library.app.commands.domain.loan import (
+from library.app.domain.loan import (
     Loan,
     LoanNotFound,
     LoanPeriod,
     LoansRepo,
 )
-from library.app.commands.domain.notification import (
+from library.app.domain.notification import (
     Notification,
     NotificationKind,
     NotificationNotFound,
     NotificationsRepo,
 )
-from library.app.commands.domain.reader import (
+from library.app.domain.reader import (
     Contact,
     Membership,
     Reader,

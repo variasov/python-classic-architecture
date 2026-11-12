@@ -4,15 +4,15 @@ from collections.abc import Callable
 import pytest
 from classic.criteria import ReturnsTrue
 
-from library.app.commands.domain.reader import (
+from library.app.commands.readers.block_reader import (
+    BlockReader,
+    BlockReaderParams,
+)
+from library.app.domain.reader import (
     Reader,
     ReaderAlreadyBlocked,
     ReaderNotFound,
     ReadersRepo,
-)
-from library.app.commands.use_cases.readers.block_reader import (
-    BlockReader,
-    BlockReaderParams,
 )
 from library.app.roles import Account, PermissionDenied, Permissions
 

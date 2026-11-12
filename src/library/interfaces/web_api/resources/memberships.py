@@ -1,6 +1,6 @@
 import falcon
 
-from library.app.commands.use_cases.readers.extend_membership import (
+from library.app.commands.readers.extend_membership import (
     ExtendMembership,
 )
 

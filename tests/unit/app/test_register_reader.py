@@ -5,15 +5,15 @@ from datetime import date
 import pytest
 from classic.criteria import ReturnsTrue
 
-from library.app.commands.domain.reader import (
+from library.app.commands.readers.register_reader import (
+    RegisterReader,
+    RegisterReaderParams,
+)
+from library.app.domain.reader import (
     Contact,
     ContactEmailInvalid,
     Membership,
     ReadersRepo,
-)
-from library.app.commands.use_cases.readers.register_reader import (
-    RegisterReader,
-    RegisterReaderParams,
 )
 from library.app.roles import Account, PermissionDenied, Permissions
 

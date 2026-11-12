@@ -3,13 +3,13 @@ from typing import Any
 
 import pytest
 
-from library.app.commands.domain.book import Book, BooksRepo
-from library.app.commands.use_cases.books.create_book_from_catalog import (
+from library.app.commands.books.create_book_from_catalog import (
     BookNotInCatalog,
     CatalogBook,
     CreateBookFromCatalog,
     CreateBookFromCatalogParams,
 )
+from library.app.domain.book import Book, BooksRepo
 from library.app.roles import Account, PermissionDenied
 
 ISBN = '9785171183660'

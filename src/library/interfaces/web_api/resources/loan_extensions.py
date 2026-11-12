@@ -1,6 +1,6 @@
 import falcon
 
-from library.app.commands.use_cases.loans.extend_loan import ExtendLoan
+from library.app.commands.loans.extend_loan import ExtendLoan
 
 
 class LoanExtensionsResource:
